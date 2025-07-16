@@ -1,35 +1,32 @@
 # BMC Crypto Library
 
-Thư viện crypto với các module AES và Curve25519/Ed25519.
+Thư viện crypto với các module AES, Curve25519/Ed25519, SHA256/SHA512, HMAC, HKDF.
 
 ## Cấu trúc dự án
 
 ```
 bmc_crypt_lib/
 ├── src/
-│   ├── AES/                    # Module AES
-│   │   ├── aes_internal.c
-│   │   └── aes_internal.h
+│   ├── aes/                    # Module AES
 │   ├── curve_25519/            # Module Curve25519/Ed25519
-│   │   ├── curve25519/
-│   │   │   ├── scalarmult_curve25519.c
-│   │   │   ├── scalarmult_curve25519.h
-│   │   │   └── ref10/
-│   │   │       ├── x25519_ref10.c
-│   │   │       └── x25519_ref10.h
-│   │   └── ed25519/
-│   │       └── ref10/
-│   │           └── scalarmult_ed25519_ref10.c
-│   └── include/                # Header files
-│       └── bmc_crypt/
-│           ├── crypto_scalarmult_curve25519.h
-│           ├── crypto_scalarmult_ed25519.h
-│           ├── export.h
-│           ├── utils.h
-│           └── private/
+│   ├── hash/                   # SHA256/SHA512
+│   ├── hmac/                   # HMAC-SHA256/HMAC-SHA512
+│   ├── hkdf/                   # HKDF-SHA256
+│   └── ...
+├── include/                    # Header files
+│   └── bmc_crypt/
+│       ├── crypto_hash_sha256.h
+│       ├── crypto_hash_sha512.h
+│       ├── crypto_hmacsha256.h
+│       ├── crypto_hmacsha512.h
+│       ├── crypto_hkdf_256.h
+│       └── ...
+├── test/                       # Unit tests
+│   ├── test_hash.c             # Test SHA256/SHA512, HMAC
+│   ├── test_hkdf.c             # Test HKDF (RFC 5869)
+│   └── ...
 ├── CMakeLists.txt              # File build chính
 ├── cmake/                      # CMake config files
-│   └── bmc_cryptConfig.cmake.in
 └── README.md                   # File này
 ```
 
@@ -39,7 +36,7 @@ bmc_crypt_lib/
 - CMake 3.10 trở lên
 - C compiler (GCC, Clang, hoặc MSVC)
 
-### Cách build
+### Cách build với vs2022
 
 1. **Tạo thư mục build:**
 ```bash
@@ -49,12 +46,12 @@ cd build
 
 2. **Configure project:**
 ```bash
-cmake ..
+cmake .. -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
 ```
 
 3. **Build project:**
 ```bash
-cmake --build .
+cmake --build . --config Release
 ```
 
 ### Các tùy chọn build
@@ -69,7 +66,7 @@ cmake -DBUILD_SHARED_LIBS=ON ..
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
-- **Build tests (nếu có):**
+- **Build tests:**
 ```bash
 cmake -DBUILD_TESTS=ON ..
 ```
@@ -78,6 +75,27 @@ cmake -DBUILD_TESTS=ON ..
 
 ```bash
 cmake --build . --target install
+```
+
+## Chạy test
+
+Sau khi build với `-DBUILD_TESTS=ON`, các test sẽ được build trong thư mục `test/`.
+
+Ví dụ chạy test HKDF:
+```bash
+./test/test_hkdf
+```
+
+- Test sử dụng test vector chuẩn từ RFC 5869 để kiểm tra tính đúng đắn của HKDF-SHA256.
+- Các test kiểm tra: extract, expand, derive_secrets, compare context, edge cases (input rỗng, output lớn, ...).
+- Nếu tất cả test pass sẽ in ra: `All HKDF tests passed!`
+
+Tương tự, có thể chạy các test khác như:
+```bash
+./test/test_hash      # Test SHA256, SHA512, HMAC
+./test/test_gcm       # Test AES-GCM
+./test/test_ctr       # Test AES-CTR
+...
 ```
 
 ## Sử dụng trong project khác
@@ -96,14 +114,16 @@ Thư viện sẽ được cài đặt với pkg-config support.
 ## API
 
 ### AES Module
-- `aes_internal.h` - Header cho các hàm AES internal
+- `crypto_core_aes.h` - API cho AES (ECB, CBC, CTR, GCM)
 
-### Curve25519 Module
+### Curve25519/Ed25519 Module
 - `crypto_scalarmult_curve25519.h` - API cho scalar multiplication trên Curve25519
-- `x25519_ref10.h` - Implementation reference cho X25519
-
-### Ed25519 Module
 - `crypto_scalarmult_ed25519.h` - API cho scalar multiplication trên Ed25519
+
+### Hash/HMAC/HKDF
+- `crypto_hash_sha256.h`, `crypto_hash_sha512.h` - SHA256/SHA512
+- `crypto_hmacsha256.h`, `crypto_hmacsha512.h` - HMAC-SHA256/SHA512
+- `crypto_hkdf_256.h` - HKDF-SHA256 (chuẩn RFC 5869)
 
 ## License
 
