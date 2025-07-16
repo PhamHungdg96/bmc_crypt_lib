@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/bmc_cryptTargets.cmake")
+
+check_required_components(bmc_crypt)
+
+# Set variables for compatibility
+set(bmc_crypt_FOUND TRUE)
+set(bmc_crypt_INCLUDE_DIRS "@PACKAGE_INCLUDE_DIRS@")
+set(bmc_crypt_LIBRARIES bmc_crypt::bmc_crypt) 

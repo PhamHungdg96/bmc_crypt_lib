@@ -1,0 +1,137 @@
+# Build directories
+build/
+build-*/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+!cmake/*.cmake
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.orig
+
+# Coverage reports
+*.gcov
+*.gcda
+*.gcno
+coverage/
+htmlcov/
+
+# Valgrind output
+valgrind-out.txt
+
+# Test output
+test-results/
+*.test
+
+# Documentation build
+docs/build/
+docs/_build/
+
+# Package files
+*.tar.gz
+*.tar.bz2
+*.zip
+*.deb
+*.rpm
+
+# Dependencies
+vendor/
+third_party/
+external/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Backup files
+*.backup
+*.old
+*.save
+
+# Profiling data
+*.prof
+gmon.out
+
+# Memory check files
+*.memcheck
+
+# Static analysis
+*.plist
+*.xml
+
+# Windows specific
+*.lnk
+*.pif
+*.scr
+*.url
+
+# Linux specific
+*.so.*
+*.ko
+*.mod
+*.mod.c
+
+# macOS specific
+*.dmg
+*.pkg
+*.app/Contents/MacOS/
