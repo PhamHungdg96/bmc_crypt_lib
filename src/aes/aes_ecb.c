@@ -2,7 +2,7 @@
 #include <bmc_crypt/crypto_core_aes.h>
 #include <bmc_crypt/private/aes_internal.h>
 
-int crypto_core_aes_ecb_set_key(const unsigned char *user_key,
+int crypto_core_aes_set_key(const unsigned char *user_key,
                                 int bits,
                                 AES_KEY *key,
                                 const int enc){

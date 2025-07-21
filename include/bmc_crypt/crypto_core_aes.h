@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <bmc_crypt/private/modes.h>
 #include <bmc_crypt/export.h>
 #include <bmc_crypt/private/aes_internal.h>
 
@@ -26,6 +27,174 @@ extern "C" {
 /* AES block size (same for all key sizes) */
 #define crypto_core_aes_BYTES crypto_core_aes128_BYTES
 
+/* =============================================================================
+ * Common AES Context for all modes
+ * ============================================================================= */
+
+/* AES mode enumeration */
+typedef enum {
+    AES_MODE_ECB = 0,
+    AES_MODE_CBC = 1,
+    AES_MODE_CTR = 2,
+    AES_MODE_GCM = 3
+} aes_mode_t;
+
+/* Common AES context structure */
+typedef struct {
+    AES_KEY key;                    /* AES key schedule */
+    block128_f block_encrypt;       /* Block encryption function */
+    block128_f block_decrypt;       /* Block decryption function */
+    aes_mode_t mode;                /* Encryption mode */
+    int enc;                        /* 1 for encrypt, 0 for decrypt */
+    
+    /* Mode-specific data */
+    union {
+        /* ECB mode - no additional data needed */
+        struct {
+            int dummy; /* Dummy member to satisfy C requirement */
+        } ecb;
+        
+        /* CBC mode */
+        struct {
+            unsigned char iv[16];    /* Initialization vector */
+            unsigned char last_block[16]; /* Last processed block for padding */
+            size_t last_block_len;   /* Length of data in last_block */
+        } cbc;
+        
+        /* CTR mode */
+        struct {
+            unsigned char nonce[16]; /* Counter block (16 bytes for full CTR mode) */
+            unsigned char keystream[16]; /* Current keystream block */
+            unsigned int keystream_pos; /* Position in current keystream */
+        } ctr;
+        
+        /* GCM mode */
+        struct {
+            GCM128_CONTEXT *gcm_ctx; /* GCM context from modes.h */
+            unsigned char nonce[12]; /* Nonce */
+            unsigned char tag[16];   /* Authentication tag */
+        } gcm;
+    } mode_data;
+    
+    /* Common state */
+    int initialized;                /* 1 if context is initialized */
+} crypto_core_aes_ctx;
+
+/* =============================================================================
+ * Common Context Functions (Init/Update/Finish)
+ * ============================================================================= */
+
+/**
+ * Initialize AES context for encryption/decryption
+ * 
+ * @param[out] ctx The AES context to initialize
+ * @param[in] key The encryption/decryption key
+ * @param[in] keylen Length of key (16, 24, or 32 bytes)
+ * @param[in] mode The AES mode to use
+ * @param[in] enc 1 for encryption, 0 for decryption
+ * @param[in] iv_nonce Initialization vector or nonce (mode-dependent)
+ * @param[in] iv_nonce_len Length of IV/nonce
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
+                         const unsigned char *key,
+                         size_t keylen,
+                         aes_mode_t mode,
+                         int enc,
+                         const unsigned char *iv_nonce,
+                         size_t iv_nonce_len);
+
+/**
+ * Process data with AES context
+ * 
+ * @param[in,out] ctx The AES context
+ * @param[out] out Output buffer
+ * @param[in] in Input buffer
+ * @param[in] inlen Length of input data
+ * @return Number of bytes processed, or -1 on error
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_update(crypto_core_aes_ctx *ctx,
+                          unsigned char *out,
+                          const unsigned char *in,
+                          size_t inlen);
+
+/**
+ * Finalize AES operation and get any remaining output
+ * 
+ * @param[in,out] ctx The AES context
+ * @param[out] out Output buffer for final data
+ * @param[out] outlen Length of final output data
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_finish(crypto_core_aes_ctx *ctx,
+                          unsigned char *out,
+                          size_t *outlen);
+
+/**
+ * Reset AES context for reuse with same key and mode
+ * 
+ * @param[in,out] ctx The AES context to reset
+ * @param[in] iv_nonce New IV/nonce
+ * @param[in] iv_nonce_len Length of new IV/nonce
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_reset(crypto_core_aes_ctx *ctx,
+                         const unsigned char *iv_nonce,
+                         size_t iv_nonce_len);
+
+/**
+ * Clean up AES context and free allocated resources
+ * 
+ * @param[in,out] ctx The AES context to clean up
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_cleanup(crypto_core_aes_ctx *ctx);
+
+/* =============================================================================
+ * GCM-specific functions for AAD
+ * ============================================================================= */
+
+/**
+ * Add additional authenticated data (GCM mode only)
+ * 
+ * @param[in,out] ctx The AES context (must be in GCM mode)
+ * @param[in] aad Additional authenticated data
+ * @param[in] aadlen Length of additional data
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_gcm_aad(crypto_core_aes_ctx *ctx,
+                           const unsigned char *aad,
+                           size_t aadlen);
+
+/**
+ * Get authentication tag (GCM mode only)
+ * 
+ * @param[in] ctx The AES context (must be in GCM mode)
+ * @param[out] tag Authentication tag (16 bytes)
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_gcm_get_tag(crypto_core_aes_ctx *ctx,
+                               unsigned char *tag);
+
+/**
+ * Set authentication tag for verification (GCM decryption only)
+ * 
+ * @param[in,out] ctx The AES context (must be in GCM decryption mode)
+ * @param[in] tag Authentication tag to verify (16 bytes)
+ * @return 0 on success, -1 on failure
+ */
+BMC_CRYPT_EXPORT
+int crypto_core_aes_gcm_set_tag(crypto_core_aes_ctx *ctx,
+                               const unsigned char *tag);
+
+
 BMC_CRYPT_EXPORT
 void crypto_core_aes_ctr_encrypt(const unsigned char *in,
                                 unsigned char *out,
@@ -36,7 +205,7 @@ void crypto_core_aes_ctr_encrypt(const unsigned char *in,
                                 unsigned int *num);
 
 BMC_CRYPT_EXPORT
-int crypto_core_aes_ecb_set_key(const unsigned char *user_key,
+int crypto_core_aes_set_key(const unsigned char *user_key,
                                 int bits,
                                 AES_KEY *key,
                                 const int enc);
@@ -83,111 +252,6 @@ int crypto_core_aes_cbc_encrypt(const unsigned char *in,
                                 const AES_KEY *key,
                                 const unsigned char *ivec,
                                 const int enc);
-
-
-/* =============================================================================
- * AES GCM Mode
- * ============================================================================= */
-
-/* GCM tag size */
-#define crypto_core_aes128_gcm_TAGBYTES 16U
-#define crypto_core_aes256_gcm_TAGBYTES 16U
-
-/**
- * Encrypt data using AES-128 in GCM mode
- * 
- * @param[out] out The output ciphertext
- * @param[out] tag The authentication tag (16 bytes)
- * @param[in] in The input plaintext
- * @param[in] inlen Length of input data
- * @param[in] key The encryption key (16 bytes)
- * @param[in] nonce The nonce (12 bytes)
- * @param[in] ad The additional authenticated data
- * @param[in] adlen Length of additional data
- * @return 0 on success, -1 on failure
- */
-BMC_CRYPT_EXPORT
-int crypto_core_aes128_gcm_encrypt(unsigned char *out,
-                                   unsigned char *tag,
-                                   const unsigned char *in,
-                                   size_t inlen,
-                                   const unsigned char *key,
-                                   const unsigned char *nonce,
-                                   const unsigned char *ad,
-                                   size_t adlen);
-
-/**
- * Decrypt data using AES-128 in GCM mode
- * 
- * @param[out] out The output plaintext
- * @param[in] in The input ciphertext
- * @param[in] inlen Length of input data
- * @param[in] tag The authentication tag (16 bytes)
- * @param[in] key The decryption key (16 bytes)
- * @param[in] nonce The nonce (12 bytes)
- * @param[in] ad The additional authenticated data
- * @param[in] adlen Length of additional data
- * @return 0 on success, -1 on failure
- */
-BMC_CRYPT_EXPORT
-int crypto_core_aes128_gcm_decrypt(unsigned char *out,
-                                   const unsigned char *in,
-                                   size_t inlen,
-                                   const unsigned char *tag,
-                                   const unsigned char *key,
-                                   const unsigned char *nonce,
-                                   const unsigned char *ad,
-                                   size_t adlen);
-
-/**
- * Encrypt data using AES-256 in GCM mode
- * 
- * @param[out] out The output ciphertext
- * @param[out] tag The authentication tag (16 bytes)
- * @param[in] in The input plaintext
- * @param[in] inlen Length of input data
- * @param[in] key The encryption key (32 bytes)
- * @param[in] nonce The nonce (12 bytes)
- * @param[in] ad The additional authenticated data
- * @param[in] adlen Length of additional data
- * @return 0 on success, -1 on failure
- */
-BMC_CRYPT_EXPORT
-int crypto_core_aes256_gcm_encrypt(unsigned char *out,
-                                   unsigned char *tag,
-                                   const unsigned char *in,
-                                   size_t inlen,
-                                   const unsigned char *key,
-                                   const unsigned char *nonce,
-                                   const unsigned char *ad,
-                                   size_t adlen);
-
-/**
- * Decrypt data using AES-256 in GCM mode
- * 
- * @param[out] out The output plaintext
- * @param[in] in The input ciphertext
- * @param[in] inlen Length of input data
- * @param[in] tag The authentication tag (16 bytes)
- * @param[in] key The decryption key (32 bytes)
- * @param[in] nonce The nonce (12 bytes)
- * @param[in] ad The additional authenticated data
- * @param[in] adlen Length of additional data
- * @return 0 on success, -1 on failure
- */
-BMC_CRYPT_EXPORT
-int crypto_core_aes256_gcm_decrypt(unsigned char *out,
-                                   const unsigned char *in,
-                                   size_t inlen,
-                                   const unsigned char *tag,
-                                   const unsigned char *key,
-                                   const unsigned char *nonce,
-                                   const unsigned char *ad,
-                                   size_t adlen);
-
-/* =============================================================================
- * Utility Functions
- * ============================================================================= */
 
 /**
  * Generate a random AES key

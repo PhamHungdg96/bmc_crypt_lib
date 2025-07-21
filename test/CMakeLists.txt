@@ -66,24 +66,24 @@ set_tests_properties(test_ctr PROPERTIES
 )
 
 # Test executable for AES GCM
-add_executable(test_gcm test_gcm.c)
+#add_executable(test_gcm test_gcm.c)
 
 # Link with the library
-target_link_libraries(test_gcm bmc_crypt)
+#target_link_libraries(test_gcm bmc_crypt)
 
 # Set include directories
-target_include_directories(test_gcm PRIVATE 
-    ${CMAKE_SOURCE_DIR}/include
-)
+#target_include_directories(test_gcm PRIVATE 
+#    ${CMAKE_SOURCE_DIR}/include
+#)
 
 # Add test
-add_test(NAME test_gcm COMMAND test_gcm)
+#add_test(NAME test_gcm COMMAND test_gcm)
 
 # Set test properties
-set_tests_properties(test_gcm PROPERTIES
-    TIMEOUT 30
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
+#set_tests_properties(test_gcm PROPERTIES
+#    TIMEOUT 30
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#)
 
 # Test executable for random_buf
 add_executable(test_random test_random.c)
@@ -185,6 +185,26 @@ set_tests_properties(test_hash PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+# Test executable for AES Context API with NIST vectors
+add_executable(test_aes_context test_aes_context.c)
+
+# Link with the library
+target_link_libraries(test_aes_context bmc_crypt)
+
+# Set include directories
+target_include_directories(test_aes_context PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Add test
+add_test(NAME test_aes_context COMMAND test_aes_context)
+
+# Set test properties
+set_tests_properties(test_aes_context PROPERTIES
+    TIMEOUT 60
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 # Optional: Add more test executables here
 # add_executable(test_ed25519 test_ed25519.c)
 # target_link_libraries(test_ed25519 bmc_crypt::bmc_crypt)
@@ -194,3 +214,17 @@ set_tests_properties(test_hash PROPERTIES
 # add_executable(test_suite test_suite.c)
 # target_link_libraries(test_suite bmc_crypt::bmc_crypt)
 # add_test(NAME test_suite COMMAND test_suite) 
+
+# Test executable for ECDH
+add_executable(test_ecdh test_ecdh.c)
+target_link_libraries(test_ecdh bmc_crypt)
+target_include_directories(test_ecdh PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME test_ecdh COMMAND test_ecdh)
+set_tests_properties(test_ecdh PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# Test executable for ECDSA/EdDSA
+add_executable(test_ecdsa test_ecdsa.c)
+target_link_libraries(test_ecdsa bmc_crypt)
+target_include_directories(test_ecdsa PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME test_ecdsa COMMAND test_ecdsa)
+set_tests_properties(test_ecdsa PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) 

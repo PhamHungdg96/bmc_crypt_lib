@@ -13,9 +13,9 @@ static const unsigned char test_key[32] = {
     0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
 };
 
-static const unsigned char test_nonce[12] = {
+static const unsigned char test_nonce[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 void test_aes_ctr_ietf_basic() {
@@ -82,7 +82,7 @@ void test_aes_ctr_ietf_different_nonce() {
     
     unsigned char keystream1[32];
     unsigned char keystream2[32];
-    unsigned char nonce2[12] = {0};
+    unsigned char nonce2[16] = {0};
     nonce2[0] = 0x01;  // Different nonce
     int ret;
     

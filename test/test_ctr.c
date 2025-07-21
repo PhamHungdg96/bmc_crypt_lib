@@ -51,7 +51,7 @@ void test_aes_ctr_encryption() {
     unsigned int num = 0;
 
     // Set up encryption key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set encryption key\n");
         exit(1);
@@ -88,7 +88,7 @@ void test_aes_ctr_decryption() {
     unsigned char ciphertext[64];
 
     // Set up encryption key (CTR uses same key for encryption and decryption)
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set key for decryption test\n");
         exit(1);
@@ -138,7 +138,7 @@ void test_aes_ctr_roundtrip() {
     }
     
     // Set up key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set key in roundtrip test\n");
         exit(1);
@@ -182,7 +182,7 @@ void test_aes_ctr_streaming() {
     }
     
     // Set up key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set key for streaming test\n");
         exit(1);
@@ -247,7 +247,7 @@ void test_aes_ctr_counter_behavior() {
     unsigned int num = 0;
     
     // Set up key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set key for counter test\n");
         exit(1);
@@ -302,7 +302,7 @@ void test_aes_ctr_partial_blocks() {
     }
     
     // Set up key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
     if (ret != 0) {
         printf("ERROR: Failed to set key for partial blocks test\n");
         exit(1);

@@ -50,7 +50,7 @@ int crypto_core_aes_ctr_ietf(unsigned char *c, unsigned long long clen, const un
     }
     
     // Set up AES-256 key
-    ret = crypto_core_aes_ecb_set_key(k, 256, &aes_key, AES_ENCRYPT);
+    ret = crypto_core_aes_set_key(k, 256, &aes_key, AES_ENCRYPT);
     if (ret != 0) {
         return -1;
     }
@@ -95,7 +95,7 @@ int crypto_core_aes_ctr_ietf_xor(unsigned char *c, const unsigned char *m,
     }
     
     // Set up AES-256 key
-    ret = crypto_core_aes_ecb_set_key(k, 256, &aes_key, AES_ENCRYPT);
+    ret = crypto_core_aes_set_key(k, 256, &aes_key, AES_ENCRYPT);
     if (ret != 0) {
         return -1;
     }

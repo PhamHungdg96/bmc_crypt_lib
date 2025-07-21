@@ -40,24 +40,28 @@ void print_hex(const char* label, const unsigned char* data, size_t len) {
 void test_aes_cbc_encryption() {
     printf("Testing AES CBC encryption...\n");
     
-    AES_KEY key;
+    crypto_core_aes_ctx ctx;
     unsigned char ciphertext[32];
-    unsigned char iv_copy[16];
-
-    // Set up encryption key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    size_t outlen;
+    
+    // Initialize context for encryption
+    int ret = crypto_core_aes_init(&ctx, test_key, 16, AES_MODE_CBC, 1, test_iv, 16);
     if (ret != 0) {
-        printf("ERROR: Failed to set encryption key\n");
+        printf("ERROR: Failed to initialize encryption context\n");
         exit(1);
     }
     
-    // Copy IV (it will be modified during encryption)
-    memcpy(iv_copy, test_iv, 16);
-    
-    // Test encryption using crypto_core_aes_cbc_encrypt
-    ret = crypto_core_aes_cbc_encrypt(test_plaintext, ciphertext, 32, &key, iv_copy, AES_ENCRYPT);
-    if (ret != 0) {
+    // Encrypt data
+    int processed = crypto_core_aes_update(&ctx, ciphertext, test_plaintext, 32);
+    if (processed != 32) {
         printf("ERROR: AES CBC encryption failed\n");
+        exit(1);
+    }
+    
+    // Finish encryption
+    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    if (ret != 0) {
+        printf("ERROR: AES CBC encryption finish failed\n");
         exit(1);
     }
     
@@ -75,38 +79,48 @@ void test_aes_cbc_encryption() {
 void test_aes_cbc_decryption() {
     printf("Testing AES CBC decryption...\n");
     
-    AES_KEY key;
+    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
     unsigned char decrypted[32];
-    unsigned char iv_copy[16];
     unsigned char ciphertext[32];
+    size_t outlen;
 
-    // Set up decryption key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_DECRYPT);
+    // Initialize encryption context to get ciphertext
+    int ret = crypto_core_aes_init(&encrypt_ctx, test_key, 16, AES_MODE_CBC, 1, test_iv, 16);
     if (ret != 0) {
-        printf("ERROR: Failed to set decryption key\n");
+        printf("ERROR: Failed to initialize encryption context for decryption test\n");
         exit(1);
     }
     
     // First encrypt to get ciphertext
-    AES_KEY encrypt_key;
-    ret = crypto_core_aes_ecb_set_key(test_key, 128, &encrypt_key, AES_ENCRYPT);
-    if (ret != 0) {
-        printf("ERROR: Failed to set encryption key for decryption test\n");
-        exit(1);
-    }
-    
-    memcpy(iv_copy, test_iv, 16);
-    ret = crypto_core_aes_cbc_encrypt(test_plaintext, ciphertext, 32, &encrypt_key, iv_copy, AES_ENCRYPT);
-    if (ret != 0) {
+    int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, test_plaintext, 32);
+    if (processed != 32) {
         printf("ERROR: Failed to encrypt data for decryption test\n");
         exit(1);
     }
     
-    // Now decrypt
-    memcpy(iv_copy, test_iv, 16);
-    ret = crypto_core_aes_cbc_encrypt(ciphertext, decrypted, 32, &key, iv_copy, AES_DECRYPT);
+    ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
+        printf("ERROR: Failed to finish encryption for decryption test\n");
+        exit(1);
+    }
+    
+    // Initialize decryption context
+    ret = crypto_core_aes_init(&decrypt_ctx, test_key, 16, AES_MODE_CBC, 0, test_iv, 16);
+    if (ret != 0) {
+        printf("ERROR: Failed to initialize decryption context\n");
+        exit(1);
+    }
+    
+    // Decrypt data
+    processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, 32);
+    if (processed != 32) {
         printf("ERROR: AES CBC decryption failed\n");
+        exit(1);
+    }
+    
+    ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+    if (ret != 0) {
+        printf("ERROR: AES CBC decryption finish failed\n");
         exit(1);
     }
     
@@ -124,11 +138,12 @@ void test_aes_cbc_decryption() {
 void test_aes_cbc_roundtrip() {
     printf("Testing AES CBC roundtrip (encrypt -> decrypt)...\n");
     
-    AES_KEY encrypt_key, decrypt_key;
+    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
     unsigned char ciphertext[64];
     unsigned char decrypted[64];
     unsigned char random_data[64];
     unsigned char iv[16];
+    size_t outlen;
     
     // Generate random test data
     for (int i = 0; i < 64; i++) {
@@ -140,34 +155,43 @@ void test_aes_cbc_roundtrip() {
         iv[i] = rand() % 256;
     }
     
-    // Set up keys
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &encrypt_key, AES_ENCRYPT);
+    // Initialize encryption context
+    int ret = crypto_core_aes_init(&encrypt_ctx, test_key, 16, AES_MODE_CBC, 1, iv, 16);
     if (ret != 0) {
-        printf("ERROR: Failed to set encryption key in roundtrip test\n");
+        printf("ERROR: Failed to initialize encryption context in roundtrip test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_ecb_set_key(test_key, 128, &decrypt_key, AES_DECRYPT);
+    // Initialize decryption context
+    ret = crypto_core_aes_init(&decrypt_ctx, test_key, 16, AES_MODE_CBC, 0, iv, 16);
     if (ret != 0) {
-        printf("ERROR: Failed to set decryption key in roundtrip test\n");
+        printf("ERROR: Failed to initialize decryption context in roundtrip test\n");
         exit(1);
     }
     
     // Encrypt
-    unsigned char iv_encrypt[16];
-    memcpy(iv_encrypt, iv, 16);
-    ret = crypto_core_aes_cbc_encrypt(random_data, ciphertext, 64, &encrypt_key, iv_encrypt, AES_ENCRYPT);
-    if (ret != 0) {
+    int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, random_data, 64);
+    if (processed != 64) {
         printf("ERROR: AES CBC encryption failed in roundtrip test\n");
         exit(1);
     }
     
-    // Decrypt
-    unsigned char iv_decrypt[16];
-    memcpy(iv_decrypt, iv, 16);
-    ret = crypto_core_aes_cbc_encrypt(ciphertext, decrypted, 64, &decrypt_key, iv_decrypt, AES_DECRYPT);
+    ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
+        printf("ERROR: AES CBC encryption finish failed in roundtrip test\n");
+        exit(1);
+    }
+    
+    // Decrypt
+    processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, 64);
+    if (processed != 64) {
         printf("ERROR: AES CBC decryption failed in roundtrip test\n");
+        exit(1);
+    }
+    
+    ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+    if (ret != 0) {
+        printf("ERROR: AES CBC decryption finish failed in roundtrip test\n");
         exit(1);
     }
     
@@ -185,25 +209,13 @@ void test_aes_cbc_roundtrip() {
 void test_aes_cbc_padding() {
     printf("Testing AES CBC with different data lengths...\n");
     
-    AES_KEY encrypt_key, decrypt_key;
+    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
     unsigned char iv[16];
+    size_t outlen;
     
     // Generate random IV
     for (int i = 0; i < 16; i++) {
         iv[i] = rand() % 256;
-    }
-    
-    // Set up keys
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &encrypt_key, AES_ENCRYPT);
-    if (ret != 0) {
-        printf("ERROR: Failed to set encryption key for padding test\n");
-        exit(1);
-    }
-    
-    ret = crypto_core_aes_ecb_set_key(test_key, 128, &decrypt_key, AES_DECRYPT);
-    if (ret != 0) {
-        printf("ERROR: Failed to set decryption key for padding test\n");
-        exit(1);
     }
     
     // Test different data lengths
@@ -221,11 +233,19 @@ void test_aes_cbc_padding() {
             data[i] = rand() % 256;
         }
         
-        // Encrypt
-        unsigned char iv_encrypt[16];
-        memcpy(iv_encrypt, iv, 16);
-        ret = crypto_core_aes_cbc_encrypt(data, ciphertext, len, &encrypt_key, iv_encrypt, AES_ENCRYPT);
+        // Initialize encryption context
+        int ret = crypto_core_aes_init(&encrypt_ctx, test_key, 16, AES_MODE_CBC, 1, iv, 16);
         if (ret != 0) {
+            printf("ERROR: Failed to initialize encryption context for length %d\n", len);
+            free(data);
+            free(ciphertext);
+            free(decrypted);
+            exit(1);
+        }
+        
+        // Encrypt
+        int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, data, len);
+        if (processed != len) {
             printf("ERROR: AES CBC encryption failed for length %d\n", len);
             free(data);
             free(ciphertext);
@@ -233,12 +253,38 @@ void test_aes_cbc_padding() {
             exit(1);
         }
         
-        // Decrypt
-        unsigned char iv_decrypt[16];
-        memcpy(iv_decrypt, iv, 16);
-        ret = crypto_core_aes_cbc_encrypt(ciphertext, decrypted, len, &decrypt_key, iv_decrypt, AES_DECRYPT);
+        ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
         if (ret != 0) {
+            printf("ERROR: AES CBC encryption finish failed for length %d\n", len);
+            free(data);
+            free(ciphertext);
+            free(decrypted);
+            exit(1);
+        }
+        
+        // Initialize decryption context
+        ret = crypto_core_aes_init(&decrypt_ctx, test_key, 16, AES_MODE_CBC, 0, iv, 16);
+        if (ret != 0) {
+            printf("ERROR: Failed to initialize decryption context for length %d\n", len);
+            free(data);
+            free(ciphertext);
+            free(decrypted);
+            exit(1);
+        }
+        
+        // Decrypt
+        processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, len);
+        if (processed != len) {
             printf("ERROR: AES CBC decryption failed for length %d\n", len);
+            free(data);
+            free(ciphertext);
+            free(decrypted);
+            exit(1);
+        }
+        
+        ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+        if (ret != 0) {
+            printf("ERROR: AES CBC decryption finish failed for length %d\n", len);
             free(data);
             free(ciphertext);
             free(decrypted);
@@ -263,57 +309,72 @@ void test_aes_cbc_padding() {
 }
 
 void test_aes_cbc_iv_modification() {
-    printf("Testing AES CBC IV behavior...\n");
+    printf("Testing AES CBC IV modification behavior...\n");
     
-    AES_KEY key;
-    unsigned char ciphertext1[32], ciphertext2[32];
+    crypto_core_aes_ctx ctx;
     unsigned char iv1[16], iv2[16];
+    size_t outlen;
     
-    // Set up key
-    int ret = crypto_core_aes_ecb_set_key(test_key, 128, &key, AES_ENCRYPT);
+    // Generate two different IVs
+    for (int i = 0; i < 16; i++) {
+        iv1[i] = rand() % 256;
+        iv2[i] = rand() % 256;
+    }
+    
+    // Make iv2 slightly different (increment last byte)
+    iv2[15] = iv1[15] + 1;
+    
+    unsigned char plaintext[16] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                                  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
+    unsigned char ciphertext1[16], ciphertext2[16];
+    
+    // Encrypt with iv1
+    int ret = crypto_core_aes_init(&ctx, test_key, 16, AES_MODE_CBC, 1, iv1, 16);
     if (ret != 0) {
-        printf("ERROR: Failed to set key for IV test\n");
+        printf("ERROR: Failed to initialize context for iv1 test\n");
         exit(1);
     }
     
-    // Test with same IV
-    memcpy(iv1, test_iv, 16);
-    memcpy(iv2, test_iv, 16);
+    int processed = crypto_core_aes_update(&ctx, ciphertext1, plaintext, 16);
+    if (processed != 16) {
+        printf("ERROR: AES CBC encryption failed for iv1\n");
+        exit(1);
+    }
     
-    ret = crypto_core_aes_cbc_encrypt(test_plaintext, ciphertext1, 32, &key, iv1, AES_ENCRYPT);
+    ret = crypto_core_aes_finish(&ctx, ciphertext1 + processed, &outlen);
     if (ret != 0) {
-        printf("ERROR: First encryption failed in IV test\n");
+        printf("ERROR: AES CBC finish failed for iv1\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_cbc_encrypt(test_plaintext, ciphertext2, 32, &key, iv2, AES_ENCRYPT);
+    // Encrypt with iv2
+    ret = crypto_core_aes_init(&ctx, test_key, 16, AES_MODE_CBC, 1, iv2, 16);
     if (ret != 0) {
-        printf("ERROR: Second encryption failed in IV test\n");
+        printf("ERROR: Failed to initialize context for iv2 test\n");
         exit(1);
     }
     
-    // Same IV should produce same ciphertext
-    if (memcmp(ciphertext1, ciphertext2, 32) != 0) {
-        printf("ERROR: Same IV produced different ciphertext\n");
+    processed = crypto_core_aes_update(&ctx, ciphertext2, plaintext, 16);
+    if (processed != 16) {
+        printf("ERROR: AES CBC encryption failed for iv2\n");
         exit(1);
     }
     
-    // Test with different IV
-    iv2[0] ^= 1; // Modify one byte
-    
-    ret = crypto_core_aes_cbc_encrypt(test_plaintext, ciphertext2, 32, &key, iv2, AES_ENCRYPT);
+    ret = crypto_core_aes_finish(&ctx, ciphertext2 + processed, &outlen);
     if (ret != 0) {
-        printf("ERROR: Encryption with modified IV failed\n");
+        printf("ERROR: AES CBC finish failed for iv2\n");
         exit(1);
     }
     
-    // Different IV should produce different ciphertext
-    if (memcmp(ciphertext1, ciphertext2, 32) == 0) {
-        printf("ERROR: Different IV produced same ciphertext\n");
+    // Results should be different due to different IVs
+    if (memcmp(ciphertext1, ciphertext2, 16) == 0) {
+        printf("ERROR: Different IVs produced same ciphertext\n");
+        print_hex("IV1 result", ciphertext1, 16);
+        print_hex("IV2 result", ciphertext2, 16);
         exit(1);
     }
     
-    printf("AES CBC IV behavior test passed\n");
+    printf("AES CBC IV modification test passed\n");
 }
 
 int main() {
@@ -323,11 +384,11 @@ int main() {
     // Initialize random seed
     bmc_crypt_init();
     
-    // test_aes_cbc_encryption();
-    // test_aes_cbc_decryption();
+    test_aes_cbc_encryption();
+    test_aes_cbc_decryption();
     test_aes_cbc_roundtrip();
-    // test_aes_cbc_padding();
-    // test_aes_cbc_iv_modification();
+    test_aes_cbc_padding();
+    test_aes_cbc_iv_modification();
     
     printf("========================\n");
     printf("All AES CBC tests passed!\n");

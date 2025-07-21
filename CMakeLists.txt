@@ -38,6 +38,7 @@ file(GLOB_RECURSE SOURCES
     "src/curve_25519/curve25519/ref10/*.c"
     "src/curve_25519/ed25519/*.c"
     "src/curve_25519/ed25519/ref10/*.c"
+    "src/curve_25519/sign/*.c"
     "src/randombytes/*.c"
     "src/randombytes/internal/*.c"
     "src/randombytes/sysrandom/*.c"
