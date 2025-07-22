@@ -198,6 +198,12 @@ if(BUILD_TESTS)
     add_subdirectory(test)
 endif()
 
+# Optional: Create demo executable
+option(BUILD_DEMO "Build demo executable" ON)
+if(BUILD_DEMO)
+    add_subdirectory(demo)
+endif()
+
 # Print configuration summary
 message(STATUS "Configuration Summary:")
 message(STATUS "  Project: ${PROJECT_NAME} ${PROJECT_VERSION}")

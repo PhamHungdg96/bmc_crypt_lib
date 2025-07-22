@@ -334,32 +334,44 @@ static int aes_cbc_update(crypto_core_aes_ctx *ctx,
                          size_t inlen) {
     size_t blocks = inlen / 16;
     size_t processed = blocks * 16;
-    
+    size_t remain = inlen % 16;
+
     if (ctx->enc) {
         /* CBC encryption */
         for (size_t i = 0; i < blocks; i++) {
-            /* XOR with IV or previous ciphertext */
             xor_block(out + i * 16, in + i * 16, ctx->mode_data.cbc.iv);
-            /* Encrypt */
             ctx->block_encrypt(out + i * 16, out + i * 16, &ctx->key);
-            /* Update IV for next block */
             memcpy(ctx->mode_data.cbc.iv, out + i * 16, 16);
         }
+        // Lưu phần dư vào last_block
+        if (remain > 0) {
+            memcpy(ctx->mode_data.cbc.last_block, in + blocks * 16, remain);
+            ctx->mode_data.cbc.last_block_len = remain;
+        } else {
+            ctx->mode_data.cbc.last_block_len = 0;
+        }
     } else {
+        if(remain == 0) {
+            blocks--;
+            remain = 16;
+            processed = blocks * 16;
+        }
         /* CBC decryption */
         for (size_t i = 0; i < blocks; i++) {
-            /* Save current ciphertext for next IV */
             unsigned char temp[16];
             memcpy(temp, in + i * 16, 16);
-            /* Decrypt */
             ctx->block_decrypt(in + i * 16, out + i * 16, &ctx->key);
-            /* XOR with IV or previous ciphertext */
             xor_block(out + i * 16, out + i * 16, ctx->mode_data.cbc.iv);
-            /* Update IV for next block */
             memcpy(ctx->mode_data.cbc.iv, temp, 16);
         }
+        // Lưu phần dư vào last_block (nếu có)
+        if (remain > 0) {
+            memcpy(ctx->mode_data.cbc.last_block, in + blocks * 16, remain);
+            ctx->mode_data.cbc.last_block_len = remain;
+        } else {
+            ctx->mode_data.cbc.last_block_len = 0;
+        }
     }
-    
     return (int)processed;
 }
 
@@ -423,14 +435,10 @@ static int aes_cbc_finish(crypto_core_aes_ctx *ctx,
         /* PKCS7 padding for encryption */
         int padding = 16 - (ctx->mode_data.cbc.last_block_len % 16);
         if (padding == 16) padding = 0;
-        
         if (padding > 0) {
-            /* Add padding */
             for (int i = 0; i < padding; i++) {
                 ctx->mode_data.cbc.last_block[ctx->mode_data.cbc.last_block_len + i] = (unsigned char)padding;
             }
-            
-            /* Encrypt padded block */
             xor_block(out, ctx->mode_data.cbc.last_block, ctx->mode_data.cbc.iv);
             ctx->block_encrypt(out, out, &ctx->key);
             *outlen = 16;
@@ -440,17 +448,26 @@ static int aes_cbc_finish(crypto_core_aes_ctx *ctx,
     } else {
         /* Remove padding for decryption */
         if (ctx->mode_data.cbc.last_block_len == 16) {
-            int padding = ctx->mode_data.cbc.last_block[15];
-            if (padding > 0 && padding <= 16) {
-                *outlen = 16 - padding;
-            } else {
-                *outlen = 16;
+            // Giải mã block cuối
+            unsigned char tmp[16];
+            ctx->block_decrypt(ctx->mode_data.cbc.last_block, tmp, &ctx->key);
+            xor_block(tmp, tmp, ctx->mode_data.cbc.iv);
+            int padding = tmp[15];
+            if (padding <= 0 || padding > 16) {
+                return -1; // padding lỗi
             }
+            // Kiểm tra tất cả byte padding
+            for (int i = 16 - padding; i < 16; i++) {
+                if (tmp[i] != (unsigned char)padding) {
+                    return -1; // padding lỗi
+                }
+            }
+            memcpy(out, tmp, 16 - padding);
+            *outlen = 16 - padding;
         } else {
             *outlen = 0;
         }
     }
-    
     return 0;
 }
 

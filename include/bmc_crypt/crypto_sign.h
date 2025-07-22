@@ -8,6 +8,9 @@ extern "C" {
 #endif
 
 #define crypto_sign_ed25519_BYTES 64U
+#define crypto_sign_ed25519_SEEDBYTES 32U
+#define crypto_sign_ed25519_PUBLICKEYBYTES 32U
+#define crypto_sign_ed25519_SECRETKEYBYTES (32U + 32U)
 #define crypto_sign_ed25519_MESSAGEBYTES_MAX (BMC_CRYPT_SIZE_MAX - crypto_sign_ed25519_BYTES)
 
 BMC_CRYPT_EXPORT
