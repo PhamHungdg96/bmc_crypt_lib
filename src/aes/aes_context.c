@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <bmc_crypt/crypto_core_aes.h>
 #include <bmc_crypt/private/aes_internal.h>
+#include <bmc_crypt/private/modes.h>
 #include <bmc_crypt/randombytes.h>
+#include <bmc_crypt/utils.h>
 
 /* =============================================================================
  * Forward declarations
@@ -41,19 +43,7 @@ static int aes_gcm_finish(crypto_core_aes_ctx *ctx,
  * Internal helper functions
  * ============================================================================= */
 
-static void increment_counter(unsigned char *counter) {
-    for (int i = 3; i >= 0; i--) {
-        counter[i]++;
-        if (counter[i] != 0) break;
-    }
-}
 
-static void increment_counter_16(unsigned char *counter) {
-    for (int i = 15; i >= 0; i--) {
-        counter[i]++;
-        if (counter[i] != 0) break;
-    }
-}
 
 static void xor_block(unsigned char *out, const unsigned char *a, const unsigned char *b) {
     for (int i = 0; i < 16; i++) {
@@ -75,6 +65,10 @@ int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
                          const unsigned char *iv_nonce,
                          size_t iv_nonce_len) {
     if (!ctx || !key) {
+        return -1;
+    }
+
+    if(enc!=AES_ENCRYPT && enc!=AES_DECRYPT){
         return -1;
     }
     
@@ -102,15 +96,8 @@ int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
     }
     
     /* Clear context */
-    memset(ctx, 0, sizeof(crypto_core_aes_ctx));
-    
-    /* Set up AES key */
-    int bits = (int)(keylen * 8);
-    int ret = crypto_core_aes_set_key(key, bits, &ctx->key, enc);
-    if (ret != 0) {
-        return -1;
-    }
-    
+    bmc_crypt_memzero(ctx, sizeof(crypto_core_aes_ctx));
+
     /* Set block cipher functions */
     ctx->block_encrypt = AES_encrypt;
     ctx->block_decrypt = AES_decrypt;
@@ -118,6 +105,16 @@ int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
     /* Set mode and encryption flag */
     ctx->mode = mode;
     ctx->enc = enc;
+    /* Set up AES key */
+    int bits = (int)(keylen * 8);
+    int enc_tmp = ctx->enc;
+    if(mode == AES_MODE_CTR || mode == AES_MODE_GCM){
+        enc_tmp = AES_ENCRYPT;
+    }
+    int ret = crypto_core_aes_set_key(key, bits, &ctx->key, enc_tmp);
+    if (ret != 0) {
+        return -1;
+    }
     
     /* Initialize mode-specific data */
     switch (mode) {
@@ -136,22 +133,22 @@ int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
             if (iv_nonce) {
                 memcpy(ctx->mode_data.ctr.nonce, iv_nonce, 16);
             }
-            ctx->mode_data.ctr.keystream_pos = 16; /* Force keystream generation */
+            ctx->mode_data.ctr.keystream_pos = 0; /* Initialize keystream position */
             break;
             
         case AES_MODE_GCM:
-            if (iv_nonce) {
-                memcpy(ctx->mode_data.gcm.nonce, iv_nonce, 12);
-            }
             
             /* Create and initialize GCM context */
             ctx->mode_data.gcm.gcm_ctx = CRYPTO_gcm128_new(&ctx->key, ctx->block_encrypt);
             if (!ctx->mode_data.gcm.gcm_ctx) {
                 return -1;
             }
+            if (iv_nonce)
+                /* Set IV */
+                CRYPTO_gcm128_setiv(ctx->mode_data.gcm.gcm_ctx, iv_nonce, 12);
             
-            /* Set IV */
-            CRYPTO_gcm128_setiv(ctx->mode_data.gcm.gcm_ctx, ctx->mode_data.gcm.nonce, 12);
+            /* Initialize tag buffer */
+            bmc_crypt_memzero(ctx->mode_data.gcm.tag, 16);
             break;
     }
     
@@ -262,13 +259,15 @@ int crypto_core_aes_reset(crypto_core_aes_ctx *ctx,
             
         case AES_MODE_CTR:
             memcpy(ctx->mode_data.ctr.nonce, iv_nonce, 16);
-            ctx->mode_data.ctr.keystream_pos = 16;
+            ctx->mode_data.ctr.keystream_pos = 0;
             break;
             
         case AES_MODE_GCM:
-            memcpy(ctx->mode_data.gcm.nonce, iv_nonce, 12);
-            /* Reset GCM context with new IV */
-            CRYPTO_gcm128_setiv(ctx->mode_data.gcm.gcm_ctx, ctx->mode_data.gcm.nonce, 12);
+            if(iv_nonce)
+                /* Reset GCM context with new IV */
+                CRYPTO_gcm128_setiv(ctx->mode_data.gcm.gcm_ctx, iv_nonce, 12);
+            /* Clear tag buffer */
+            bmc_crypt_memzero(ctx->mode_data.gcm.tag, 16);
             break;
     }
     
@@ -301,7 +300,7 @@ int crypto_core_aes_cleanup(crypto_core_aes_ctx *ctx) {
     }
     
     /* Clear context */
-    memset(ctx, 0, sizeof(crypto_core_aes_ctx));
+    bmc_crypt_memzero(ctx, sizeof(crypto_core_aes_ctx));
     return 0;
 }
 
@@ -313,6 +312,11 @@ static int aes_ecb_update(crypto_core_aes_ctx *ctx,
                          unsigned char *out,
                          const unsigned char *in,
                          size_t inlen) {
+    /* Handle empty input */
+    if (inlen == 0) {
+        return 0;
+    }
+    
     size_t blocks = inlen / 16;
     size_t processed = blocks * 16;
     
@@ -332,6 +336,11 @@ static int aes_cbc_update(crypto_core_aes_ctx *ctx,
                          unsigned char *out,
                          const unsigned char *in,
                          size_t inlen) {
+    /* Handle empty input */
+    if (inlen == 0) {
+        return 0;
+    }
+    
     size_t blocks = inlen / 16;
     size_t processed = blocks * 16;
     size_t remain = inlen % 16;
@@ -379,40 +388,48 @@ static int aes_ctr_update(crypto_core_aes_ctx *ctx,
                          unsigned char *out,
                          const unsigned char *in,
                          size_t inlen) {
-    size_t processed = 0;
-    
-    for (size_t i = 0; i < inlen; i++) {
-        /* Generate new keystream block if needed */
-        if (ctx->mode_data.ctr.keystream_pos >= 16) {
-            /* Use the entire nonce as counter block */
-            unsigned char counter_block[16];
-            memcpy(counter_block, ctx->mode_data.ctr.nonce, 16);
-            
-            /* Encrypt counter block to get keystream */
-            ctx->block_encrypt(counter_block, ctx->mode_data.ctr.keystream, &ctx->key);
-            
-            /* Increment the entire counter (16 bytes) */
-            increment_counter_16(ctx->mode_data.ctr.nonce);
-            ctx->mode_data.ctr.keystream_pos = 0;
-        }
-        
-        /* XOR input with keystream */
-        out[i] = in[i] ^ ctx->mode_data.ctr.keystream[ctx->mode_data.ctr.keystream_pos];
-        ctx->mode_data.ctr.keystream_pos++;
-        processed++;
+    /* Handle empty input */
+    if (inlen == 0) {
+        return 0;
     }
     
-    return (int)processed;
+    /* Use the optimized CTR implementation from modes/ctr_128.c */
+    CRYPTO_ctr128_encrypt(in, out, inlen, &ctx->key, 
+                         ctx->mode_data.ctr.nonce,
+                         ctx->mode_data.ctr.keystream, 
+                         &ctx->mode_data.ctr.keystream_pos,
+                         ctx->block_encrypt);
+    
+    return (int)inlen;
 }
 
 static int aes_gcm_update(crypto_core_aes_ctx *ctx,
                          unsigned char *out,
                          const unsigned char *in,
                          size_t inlen) {
+    int ret;
+    
+    /* Handle empty input */
+    if (inlen == 0) {
+        return 0;
+    }
+
+    if(!ctx->mode_data.gcm.gcm_ctx){
+        return -1;
+    }
+    
     if (ctx->enc) {
-        return CRYPTO_gcm128_encrypt(ctx->mode_data.gcm.gcm_ctx, in, out, inlen);
+        ret = CRYPTO_gcm128_encrypt(ctx->mode_data.gcm.gcm_ctx, in, out, inlen);
     } else {
-        return CRYPTO_gcm128_decrypt(ctx->mode_data.gcm.gcm_ctx, in, out, inlen);
+        ret = CRYPTO_gcm128_decrypt(ctx->mode_data.gcm.gcm_ctx, in, out, inlen);
+    }
+    
+    /* GCM functions return 0 on success, -1 on error */
+    /* We need to return number of bytes processed on success */
+    if (ret == 0) {
+        return (int)inlen;
+    } else {
+        return -1;
     }
 }
 
@@ -489,8 +506,12 @@ static int aes_gcm_finish(crypto_core_aes_ctx *ctx,
         CRYPTO_gcm128_tag(ctx->mode_data.gcm.gcm_ctx, ctx->mode_data.gcm.tag, 16);
     } else {
         /* Verify authentication tag */
-        int ret = CRYPTO_gcm128_finish(ctx->mode_data.gcm.gcm_ctx, ctx->mode_data.gcm.tag, 16);
-        if (ret != 0) {
+        /* First, generate the expected tag from the processed data */
+        unsigned char expected_tag[16];
+        CRYPTO_gcm128_tag(ctx->mode_data.gcm.gcm_ctx, expected_tag, 16);
+        
+        /* Compare with the provided tag */
+        if (bmc_crypt_memcmp(expected_tag, ctx->mode_data.gcm.tag, 16) != 0) {
             return -1; /* Authentication failed */
         }
     }
@@ -508,13 +529,15 @@ int crypto_core_aes_gcm_aad(crypto_core_aes_ctx *ctx,
     if (!ctx || !ctx->initialized || ctx->mode != AES_MODE_GCM) {
         return -1;
     }
-    
-    return CRYPTO_gcm128_aad(ctx->mode_data.gcm.gcm_ctx, aad, aadlen);
+    if (aad && aadlen > 0) {
+        return CRYPTO_gcm128_aad(ctx->mode_data.gcm.gcm_ctx, aad, aadlen);
+    }
+    return 0;
 }
 
 int crypto_core_aes_gcm_get_tag(crypto_core_aes_ctx *ctx,
                                unsigned char *tag) {
-    if (!ctx || !ctx->initialized || ctx->mode != AES_MODE_GCM || !ctx->enc) {
+    if (!ctx || !ctx->initialized || ctx->mode != AES_MODE_GCM || !ctx->enc || !tag) {
         return -1;
     }
     
@@ -525,7 +548,7 @@ int crypto_core_aes_gcm_get_tag(crypto_core_aes_ctx *ctx,
 
 int crypto_core_aes_gcm_set_tag(crypto_core_aes_ctx *ctx,
                                const unsigned char *tag) {
-    if (!ctx || !ctx->initialized || ctx->mode != AES_MODE_GCM || ctx->enc) {
+    if (!ctx || !ctx->initialized || ctx->mode != AES_MODE_GCM || ctx->enc || !tag) {
         return -1;
     }
     

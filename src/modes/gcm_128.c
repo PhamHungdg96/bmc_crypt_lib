@@ -299,7 +299,7 @@ void gcm_ghash_4bit(u64 Xi[2], const u128 Htable[16], const u8 *inp,
 void CRYPTO_gcm128_init(GCM128_CONTEXT *ctx, void *key, block128_f block)
 {
 
-    memset(ctx, 0, sizeof(*ctx));
+    bmc_crypt_memzero(ctx, sizeof(*ctx));
     ctx->block = block;
     ctx->key = key;
 
@@ -1041,5 +1041,8 @@ GCM128_CONTEXT *CRYPTO_gcm128_new(void *key, block128_f block)
 
 void CRYPTO_gcm128_release(GCM128_CONTEXT *ctx)
 {
-    bmc_crypt_memzero(ctx, sizeof(*ctx));
+    if (ctx) {
+        bmc_crypt_memzero(ctx, sizeof(*ctx));
+        bmc_crypt_free(ctx);
+    }
 }

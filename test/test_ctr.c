@@ -354,6 +354,99 @@ void test_aes_ctr_partial_blocks() {
     printf("AES CTR partial blocks test passed\n");
 }
 
+void test_aes256_ctr_arbitrary_length() {
+    printf("Testing AES-256 CBC with arbitrary message length...\n");
+    
+    // Key 128-bit (16 bytes)
+    unsigned char key[16] = {
+        0x00, 0x11, 0x22, 0x33,
+        0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xaa, 0xbb,
+        0xcc, 0xdd, 0xee, 0xff
+    };
+
+    // Nonce / Counter block
+    unsigned char iv[16] = {
+        0x01, 0x02, 0x03, 0x04,
+        0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0a, 0x0b, 0x0c,
+        0x0d, 0x0e, 0x0f, 0x10
+    };
+    const unsigned char *message = "hello";
+    size_t message_len = strlen(message);
+
+    // unsigned char key[16] = {
+    //     0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+    //     0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+    // };
+
+    // unsigned char iv[16] = {
+    //     0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+    //     0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+    // };
+
+    // unsigned char message[64] = {
+    //     0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
+    //     0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a,
+    //     0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c,
+    //     0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51,
+    //     0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11,
+    //     0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef,
+    //     0xf6, 0x9f, 0x24, 0x45, 0xdf, 0x4f, 0x9b, 0x17,
+    //     0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10
+    // };
+    // size_t message_len = 64;
+
+    
+    crypto_core_aes_ctx enc_ctx, dec_ctx;
+    unsigned char ciphertext[128];
+    unsigned char decrypted[128];
+    unsigned char final_block[32];
+    size_t outlen = 0;
+    
+    // Encrypt
+    if (crypto_core_aes_init(&enc_ctx, key, 16, AES_MODE_CTR, 1, iv, 16) != 0) {
+        printf("ERROR: AES-256 CBC encrypt init failed\n");
+        exit(1);
+    }
+    int clen = crypto_core_aes_update(&enc_ctx, ciphertext, message, message_len);
+    size_t total_clen = clen;
+    if (crypto_core_aes_finish(&enc_ctx, ciphertext + clen, &outlen) != 0) {
+        printf("ERROR: AES-256 CBC encrypt finish failed\n");
+        exit(1);
+    }
+    printf("clen: %zu\n", clen);
+    total_clen += outlen;
+    printf("Ciphertext: ");
+    for (size_t i = 0; i < total_clen; i++) printf("%02x", ciphertext[i]);
+    printf("\n");
+    
+    // Decrypt
+    if (crypto_core_aes_init(&dec_ctx, key, 16, AES_MODE_CTR, 1, iv, 16) != 0) {
+        printf("ERROR: AES-256 CBC decrypt init failed\n");
+        exit(1);
+    }
+    int dlen = crypto_core_aes_update(&dec_ctx, decrypted, ciphertext, total_clen);
+    size_t total_dlen = dlen;
+    printf("dlen: %zu\n", dlen);
+    if (crypto_core_aes_finish(&dec_ctx, decrypted + dlen, &outlen) != 0) {
+        printf("ERROR: AES-256 CBC decrypt finish failed\n");
+        exit(1);
+    }
+    total_dlen += outlen;
+    printf("Decrypted: ");
+    for (size_t i = 0; i < total_dlen; i++) printf("%02x", decrypted[i]);
+    printf("\n");
+    printf("Decrypted: %.*s\n", (int)total_dlen, decrypted);
+    // Sau khi finish giải mã
+    // outlen là số byte thực sự của block cuối (đã loại padding)
+    if (total_dlen != message_len || memcmp(decrypted, message, message_len) != 0) {
+        printf("ERROR: AES-256 CBC roundtrip failed!\n");
+        exit(1);
+    }
+    printf("AES-256 CBC arbitrary length test passed!\n");
+}
+
 int main() {
     printf("Starting AES CTR tests...\n");
     printf("========================\n");
@@ -367,6 +460,7 @@ int main() {
     test_aes_ctr_streaming();
     test_aes_ctr_counter_behavior();
     test_aes_ctr_partial_blocks();
+    test_aes256_ctr_arbitrary_length();
     
     printf("========================\n");
     printf("All AES CTR tests passed!\n");

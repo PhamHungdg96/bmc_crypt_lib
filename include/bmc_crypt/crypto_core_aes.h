@@ -71,7 +71,6 @@ typedef struct {
         /* GCM mode */
         struct {
             GCM128_CONTEXT *gcm_ctx; /* GCM context from modes.h */
-            unsigned char nonce[12]; /* Nonce */
             unsigned char tag[16];   /* Authentication tag */
         } gcm;
     } mode_data;
@@ -252,6 +251,26 @@ int crypto_core_aes_cbc_encrypt(const unsigned char *in,
                                 const AES_KEY *key,
                                 const unsigned char *ivec,
                                 const int enc);
+
+BMC_CRYPT_EXPORT
+int crypto_core_aes128_gcm_decrypt(unsigned char *out,
+                                   const unsigned char *in,
+                                   size_t inlen,
+                                   const unsigned char *tag,
+                                   const unsigned char *key,
+                                   const unsigned char *nonce,
+                                   const unsigned char *ad,
+                                   size_t adlen);
+
+BMC_CRYPT_EXPORT
+int crypto_core_aes128_gcm_encrypt(unsigned char *out,
+                                   unsigned char *tag,
+                                   const unsigned char *in,
+                                   size_t inlen,
+                                   const unsigned char *key,
+                                   const unsigned char *nonce,
+                                   const unsigned char *ad,
+                                   size_t adlen);
 
 /**
  * Generate a random AES key

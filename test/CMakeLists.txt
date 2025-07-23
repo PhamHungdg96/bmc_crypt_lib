@@ -66,24 +66,24 @@ set_tests_properties(test_ctr PROPERTIES
 )
 
 # Test executable for AES GCM
-#add_executable(test_gcm test_gcm.c)
+add_executable(test_gcm test_gcm.c)
 
 # Link with the library
-#target_link_libraries(test_gcm bmc_crypt)
+target_link_libraries(test_gcm bmc_crypt)
 
 # Set include directories
-#target_include_directories(test_gcm PRIVATE 
-#    ${CMAKE_SOURCE_DIR}/include
-#)
+target_include_directories(test_gcm PRIVATE 
+   ${CMAKE_SOURCE_DIR}/include
+)
 
 # Add test
-#add_test(NAME test_gcm COMMAND test_gcm)
+add_test(NAME test_gcm COMMAND test_gcm)
 
 # Set test properties
-#set_tests_properties(test_gcm PROPERTIES
-#    TIMEOUT 30
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#)
+set_tests_properties(test_gcm PROPERTIES
+   TIMEOUT 30
+   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # Test executable for random_buf
 add_executable(test_random test_random.c)
