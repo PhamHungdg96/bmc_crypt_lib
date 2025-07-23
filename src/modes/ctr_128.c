@@ -26,7 +26,7 @@ static void ctr128_inc(unsigned char *counter)
     } while (n);
 }
 
-#if !defined(OPENSSL_SMALL_FOOTPRINT)
+#if !defined(BMC_SMALL_FOOTPRINT)
 static void ctr128_inc_aligned(unsigned char *counter)
 {
     size_t *data, c, d, n;
@@ -70,7 +70,7 @@ void CRYPTO_ctr128_encrypt(const unsigned char *in, unsigned char *out,
 
     n = *num;
 
-#if !defined(OPENSSL_SMALL_FOOTPRINT)
+#if !defined(BMC_SMALL_FOOTPRINT)
     if (16 % sizeof(size_t) == 0) { /* always true actually */
         do {
             while (n && len) {

@@ -116,7 +116,7 @@ struct gcm128_context {
     unsigned int mres, ares;
     block128_f block;
     void *key;
-#if !defined(OPENSSL_SMALL_FOOTPRINT)
+#if !defined(BMC_SMALL_FOOTPRINT)
     unsigned char Xn[48];
 #endif
 };

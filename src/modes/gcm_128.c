@@ -68,7 +68,7 @@ typedef size_t size_t_aX;
 static void gcm_init_4bit(u128 Htable[16], u64 H[2])
 {
     u128 V;
-# if defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(BMC_SMALL_FOOTPRINT)
     int i;
 # endif
 
@@ -77,7 +77,7 @@ static void gcm_init_4bit(u128 Htable[16], u64 H[2])
     V.hi = H[0];
     V.lo = H[1];
 
-# if defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(BMC_SMALL_FOOTPRINT)
     for (Htable[8] = V, i = 4; i > 0; i >>= 1) {
         REDUCE1BIT(V);
         Htable[i] = V;
@@ -189,7 +189,7 @@ static void gcm_gmult_4bit(u64 Xi[2], const u128 Htable[16])
     }
 }
 
-#  if !defined(OPENSSL_SMALL_FOOTPRINT)
+#  if !defined(BMC_SMALL_FOOTPRINT)
 /*
  * Streamed gcm_mult_4bit, see CRYPTO_gcm128_[en|de]crypt for
  * details... Compiler-generated code doesn't seem to give any
@@ -276,7 +276,7 @@ void gcm_ghash_4bit(u64 Xi[2], const u128 Htable[16], const u8 *inp,
 # endif
 
 # define GCM_MUL(ctx)      gcm_gmult_4bit(ctx->Xi.u,ctx->Htable)
-# if defined(GHASH_ASM) || !defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(GHASH_ASM) || !defined(BMC_SMALL_FOOTPRINT)
 #  define GHASH(ctx,in,len) gcm_ghash_4bit((ctx)->Xi.u,(ctx)->Htable,in,len)
 /*
  * GHASH_CHUNK is "stride parameter" missioned to mitigate cache trashing
@@ -491,7 +491,7 @@ int CRYPTO_gcm128_encrypt(GCM128_CONTEXT *ctx,
     void *key = ctx->key;
 #ifdef GCM_FUNCREF_4BIT
     void (*gcm_gmult_p) (u64 Xi[2], const u128 Htable[16]) = ctx->gmult;
-# if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
     void (*gcm_ghash_p) (u64 Xi[2], const u128 Htable[16],
                          const u8 *inp, size_t len) = ctx->ghash;
 # endif
@@ -506,7 +506,7 @@ int CRYPTO_gcm128_encrypt(GCM128_CONTEXT *ctx,
 
     if (ctx->ares) {
         /* First call to encrypt finalizes GHASH(AAD) */
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
         if (len == 0) {
             GCM_MUL(ctx);
             ctx->ares = 0;
@@ -532,7 +532,7 @@ int CRYPTO_gcm128_encrypt(GCM128_CONTEXT *ctx,
         ctr = ctx->Yi.d[3];
 
     n = mres % 16;
-#if !defined(OPENSSL_SMALL_FOOTPRINT)
+#if !defined(BMC_SMALL_FOOTPRINT)
     if (16 % sizeof(size_t) == 0) { /* always true actually */
         do {
             if (n) {
@@ -692,7 +692,7 @@ int CRYPTO_gcm128_encrypt(GCM128_CONTEXT *ctx,
             }else
                 ctx->Yi.d[3] = ctr;
         }
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
         ctx->Xn[mres++] = out[i] = in[i] ^ ctx->EKi.c[n];
         n = (n + 1) % 16;
         if (mres == sizeof(ctx->Xn)) {
@@ -723,7 +723,7 @@ int CRYPTO_gcm128_decrypt(GCM128_CONTEXT *ctx,
     void *key = ctx->key;
 #ifdef GCM_FUNCREF_4BIT
     void (*gcm_gmult_p) (u64 Xi[2], const u128 Htable[16]) = ctx->gmult;
-# if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
     void (*gcm_ghash_p) (u64 Xi[2], const u128 Htable[16],
                          const u8 *inp, size_t len) = ctx->ghash;
 # endif
@@ -738,7 +738,7 @@ int CRYPTO_gcm128_decrypt(GCM128_CONTEXT *ctx,
 
     if (ctx->ares) {
         /* First call to decrypt finalizes GHASH(AAD) */
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
         if (len == 0) {
             GCM_MUL(ctx);
             ctx->ares = 0;
@@ -764,7 +764,7 @@ int CRYPTO_gcm128_decrypt(GCM128_CONTEXT *ctx,
         ctr = ctx->Yi.d[3];
 
     n = mres % 16;
-#if !defined(OPENSSL_SMALL_FOOTPRINT)
+#if !defined(BMC_SMALL_FOOTPRINT)
     if (16 % sizeof(size_t) == 0) { /* always true actually */
         do {
             if (n) {
@@ -930,7 +930,7 @@ int CRYPTO_gcm128_decrypt(GCM128_CONTEXT *ctx,
             }else
                 ctx->Yi.d[3] = ctr;
         }
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
         out[i] = (ctx->Xn[mres++] = c = in[i]) ^ ctx->EKi.c[n];
         n = (n + 1) % 16;
         if (mres == sizeof(ctx->Xn)) {
@@ -959,13 +959,13 @@ int CRYPTO_gcm128_finish(GCM128_CONTEXT *ctx, const unsigned char *tag,
     u64 clen = ctx->len.u[1] << 3;
 #ifdef GCM_FUNCREF_4BIT
     void (*gcm_gmult_p) (u64 Xi[2], const u128 Htable[16]) = ctx->gmult;
-# if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+# if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
     void (*gcm_ghash_p) (u64 Xi[2], const u128 Htable[16],
                          const u8 *inp, size_t len) = ctx->ghash;
 # endif
 #endif
 
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
     u128 bitlen;
     unsigned int mres = ctx->mres;
 
@@ -1001,7 +1001,7 @@ int CRYPTO_gcm128_finish(GCM128_CONTEXT *ctx, const unsigned char *tag,
 #endif
     }
 
-#if defined(GHASH) && !defined(OPENSSL_SMALL_FOOTPRINT)
+#if defined(GHASH) && !defined(BMC_SMALL_FOOTPRINT)
     bitlen.hi = alen;
     bitlen.lo = clen;
     memcpy(ctx->Xn + mres, &bitlen, sizeof(bitlen));
