@@ -15,8 +15,8 @@ int crypto_core_aes_set_key(const unsigned char *user_key,
     }
 }
 
-int crypto_core_aes_ecb_encrypt(unsigned char *out,
-    const unsigned char *in,
+int crypto_core_aes_ecb_encrypt(const unsigned char *in,
+    unsigned char *out,
     const AES_KEY *key,
     const int enc){
     assert(out && in && key);

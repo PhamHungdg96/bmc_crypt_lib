@@ -8,7 +8,7 @@
 # include <string.h>
 
 
-#define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
+#  define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
 #  define AES_ENCRYPT     1
 #  define AES_DECRYPT     0
 #  define AES_MAXNR 14
@@ -32,7 +32,7 @@ typedef struct aes_key_st AES_KEY;
 #  define PUTU32(ct, st) { (ct)[0] = (u8)((st) >> 24); (ct)[1] = (u8)((st) >> 16); (ct)[2] = (u8)((st) >>  8); (ct)[3] = (u8)(st); }
 # endif
 
-typedef uint64_t u64;
+typedef unsigned long long u64;
 # ifdef AES_LONG
 typedef unsigned long u32;
 # else
@@ -50,4 +50,4 @@ void AES_encrypt(const unsigned char* in, unsigned char* out, const AES_KEY* key
 void AES_decrypt(const unsigned char* in, unsigned char* out, const AES_KEY* key);
 
 
-#endif // _AES_H_
+#endif // _AES_INTERNAL_H_

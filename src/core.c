@@ -25,6 +25,7 @@ static volatile int locked;
 int
 bmc_crypt_init(void)
 {
+    // printf("\nbmc_crypt_init\n");
     if (bmc_crypt_crit_enter() != 0) {
         return -1; /* LCOV_EXCL_LINE */
     }

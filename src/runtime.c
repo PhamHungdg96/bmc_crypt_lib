@@ -145,7 +145,6 @@ _bmc_crypt_runtime_arm_cpu_features(CPUFeatures * const cpu_features)
     }
 # endif
 #endif
-
     return 0;
 }
 
@@ -304,13 +303,6 @@ _bmc_crypt_runtime_intel_cpu_features(CPUFeatures * const cpu_features)
 #else
     cpu_features->has_rdrand = 0;
 #endif
-
-    cpu_features->is_little_endian = 0;
-
-#ifdef NATIVE_LITTLE_ENDIAN
-    cpu_features->is_little_endian = 1;
-#endif
-    printf("\ncpu_features->is_little_endian: %d\n", cpu_features->is_little_endian);
     return 0;
 }
 
@@ -318,7 +310,12 @@ int
 _bmc_crypt_runtime_get_cpu_features(void)
 {
     int ret = -1;
+    _cpu_features.is_little_endian = 0;
+    #ifdef NATIVE_LITTLE_ENDIAN
+        _cpu_features.is_little_endian = 1;
+    #endif
 
+    // printf("\ncpu_features->is_little_endian: %d\n", _cpu_features.is_little_endian);
     ret &= _bmc_crypt_runtime_arm_cpu_features(&_cpu_features);
     ret &= _bmc_crypt_runtime_intel_cpu_features(&_cpu_features);
     _cpu_features.initialized = 1;

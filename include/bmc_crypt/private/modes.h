@@ -1,7 +1,8 @@
 #ifndef modes_H
 #define modes_H
 
-#include <bmc_crypt/private/aes_internal.h>
+#include <stddef.h>  // cho size_t
+#include <stdint.h>  // cho uint8_t, uint32_t, uint64_t
 
 #if (defined(_WIN32) || defined(_WIN64)) && !defined(__MINGW32__)
 typedef __int64 i64;
@@ -51,7 +52,7 @@ typedef unsigned char u8;
 #  elif defined(__aarch64__)
 #   if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
        __BYTE_ORDER__==__ORDER_LITTLE_ENDIAN__
-#    define BSWAP8(x) ({ u64 ret_;                       \
+#    define BSWAP8(x) ({ u64 ret_;                      \
                         asm ("rev %0,%1"                \
                         : "=r"(ret_) : "r"(x)); ret_;   })
 #    define BSWAP4(x) ({ u32 ret_;                       \
@@ -90,7 +91,7 @@ _asm mov eax, val _asm bswap eax}
 # define PUTU32(p,v)     ((p)[0]=(u8)((v)>>24),(p)[1]=(u8)((v)>>16),(p)[2]=(u8)((v)>>8),(p)[3]=(u8)(v))
 #endif
 
-typedef void (*block128_f) (const unsigned char in[16], unsigned char out[16], const AES_KEY *key);
+typedef void (*block128_f) (const unsigned char in[16], unsigned char out[16], const void *key);
 
 /*- GCM definitions */ typedef struct {
     u64 hi, lo;
@@ -127,14 +128,14 @@ typedef struct gcm128_context GCM128_CONTEXT;
  * internal
  */
 void CRYPTO_cbc128_encrypt(const unsigned char *in, unsigned char *out,
-                           size_t len, const AES_KEY *key,
+                           size_t len, const void *key,
                            unsigned char ivec[16], block128_f block);
 
 void CRYPTO_cbc128_decrypt(const unsigned char *in, unsigned char *out,
-                           size_t len, const AES_KEY *key,
+                           size_t len, const void *key,
                            unsigned char ivec[16], block128_f block);
 void CRYPTO_ctr128_encrypt(const unsigned char *in, unsigned char *out,
-                           size_t len, const AES_KEY *key,
+                           size_t len, const void *key,
                            unsigned char ivec[16],
                            unsigned char ecount_buf[16], unsigned int *num,
                            block128_f block);

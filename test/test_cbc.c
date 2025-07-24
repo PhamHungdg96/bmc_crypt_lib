@@ -447,11 +447,11 @@ int main() {
     // Initialize random seed
     bmc_crypt_init();
     
-    // test_aes_cbc_encryption();
-    // test_aes_cbc_decryption();
-    // test_aes_cbc_roundtrip();
-    // test_aes_cbc_padding();
-    // test_aes_cbc_iv_modification();
+    test_aes_cbc_encryption();
+    test_aes_cbc_decryption();
+    test_aes_cbc_roundtrip();
+    test_aes_cbc_padding();
+    test_aes_cbc_iv_modification();
     // Thêm test mới:
     test_aes256_cbc_arbitrary_length();
     

@@ -66,8 +66,8 @@ if(BUILD_SHARED_LIBS)
     
     # Set compiler flags for shared library
     target_compile_options(bmc_crypt PRIVATE
-        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
-        $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
+        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wmacro-redefined>
+        $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wmacro-redefined>
         $<$<C_COMPILER_ID:MSVC>:/W3>
     )
     
@@ -109,8 +109,8 @@ else()
     
     # Set compiler flags for static library
     target_compile_options(bmc_crypt PRIVATE
-        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
-        $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
+        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wmacro-redefined>
+        $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wmacro-redefined>
         $<$<C_COMPILER_ID:MSVC>:/W3>
     )
     

@@ -60,7 +60,7 @@ static void ctr128_inc_aligned(unsigned char *counter)
  * doesn't overflow into the rest of the IV when incremented.
  */
 void CRYPTO_ctr128_encrypt(const unsigned char *in, unsigned char *out,
-                           size_t len, const AES_KEY *key,
+                           size_t len, const void *key,
                            unsigned char ivec[16],
                            unsigned char ecount_buf[16], unsigned int *num,
                            block128_f block)

@@ -54,6 +54,28 @@ cmake .. -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 ```
 
+### Cách build với Ninja cho android
+
+1. **Tạo thư mục build:**
+```bash
+mkdir build_android
+cd build_android
+```
+
+2. **Configure project:**
+```bash
+cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/Users/APC/AppData/Local/Android/Sdk/ndk/25.2.9519653/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI=arm64-v8a \
+    -DANDROID_PLATFORM=android-24 \
+    -DCMAKE_BUILD_TYPE=Release \
+    -G "Ninja"
+```
+
+3. **Build project:**
+```bash
+cmake --build . --config Release
+```
+
 ### Các tùy chọn build
 
 - **Build shared library:**
