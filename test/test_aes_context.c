@@ -135,22 +135,23 @@ static const unsigned char aes128_gcm_tag[16] = {
 static int test_aes128_ecb_nist(void) {
     printf("Testing AES-128 ECB with NIST vector...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char ciphertext[16];
     unsigned char decrypted[16];
     size_t outlen;
+    int ret;
     
     /* Initialize for encryption */
-    int ret = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
+    ctx = crypto_core_aes_init_ex(aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
     assert(ret == 0);
     
     /* Encrypt data */
-    int processed = crypto_core_aes_update(&ctx, ciphertext, aes128_plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext, aes128_plaintext, 16);
     assert(processed == 16);
     
     /* Finish encryption */
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     /* Verify ciphertext matches NIST vector */
@@ -158,15 +159,15 @@ static int test_aes128_ecb_nist(void) {
     printf("  AES-128 ECB encryption matches NIST vector\n");
     
     /* Initialize for decryption */
-    ret = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
+    ctx = crypto_core_aes_init_ex(aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
     assert(ret == 0);
     
     /* Decrypt data */
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, 16);
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, 16);
     assert(processed == 16);
     
     /* Finish decryption */
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption matches original plaintext */
@@ -432,7 +433,7 @@ static int test_multiple_blocks(void) {
 int main(void) {
     printf("Testing AES Context with NIST Test Vectors\n");
     printf("==========================================\n\n");
-    
+    bmc_crypt_init();
     /* Test NIST vectors */
     test_aes128_ecb_nist();
     test_aes256_ecb_nist();

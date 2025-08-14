@@ -57,6 +57,23 @@ static void xor_block(unsigned char *out, const unsigned char *a, const unsigned
  * Context initialization
  * ============================================================================= */
 
+crypto_core_aes_ctx * crypto_core_aes_init_ex(
+                         const unsigned char *key,
+                         size_t keylen,
+                         aes_mode_t mode,
+                         int enc,
+                         const unsigned char *iv_nonce,
+                         size_t iv_nonce_len){
+    crypto_core_aes_ctx *ctx = bmc_crypt_malloc(sizeof(crypto_core_aes_ctx));
+    if(ctx == NULL){
+        return NULL;
+    }
+    if (crypto_core_aes_init(ctx, key, keylen, mode, enc, iv_nonce, iv_nonce_len) != 0) {
+        return NULL;
+    }
+    return ctx;                   
+}
+
 int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
                          const unsigned char *key,
                          size_t keylen,
@@ -316,7 +333,6 @@ static int aes_ecb_update(crypto_core_aes_ctx *ctx,
     if (inlen == 0) {
         return 0;
     }
-    
     size_t blocks = inlen / 16;
     size_t processed = blocks * 16;
     
