@@ -40,7 +40,7 @@ void print_hex(const char* label, const unsigned char* data, size_t len) {
 void test_aes_cbc_encryption() {
     printf("Testing AES CBC encryption...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char ciphertext[32];
     size_t outlen;
     
@@ -52,14 +52,14 @@ void test_aes_cbc_encryption() {
     }
     
     // Encrypt data
-    int processed = crypto_core_aes_update(&ctx, ciphertext, test_plaintext, 32);
+    int processed = crypto_core_aes_update(ctx, ciphertext, test_plaintext, 32);
     if (processed != 32) {
         printf("ERROR: AES CBC encryption failed\n");
         exit(1);
     }
     
     // Finish encryption
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC encryption finish failed\n");
         exit(1);
@@ -79,7 +79,7 @@ void test_aes_cbc_encryption() {
 void test_aes_cbc_decryption() {
     printf("Testing AES CBC decryption...\n");
     
-    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
+    crypto_core_aes_ctx *encrypt_ctx, *decrypt_ctx;
     unsigned char decrypted[32];
     unsigned char ciphertext[32];
     size_t outlen;
@@ -92,13 +92,13 @@ void test_aes_cbc_decryption() {
     }
     
     // First encrypt to get ciphertext
-    int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, test_plaintext, 32);
+    int processed = crypto_core_aes_update(encrypt_ctx, ciphertext, test_plaintext, 32);
     if (processed != 32) {
         printf("ERROR: Failed to encrypt data for decryption test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(encrypt_ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: Failed to finish encryption for decryption test\n");
         exit(1);
@@ -112,13 +112,13 @@ void test_aes_cbc_decryption() {
     }
     
     // Decrypt data
-    processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, 32);
+    processed = crypto_core_aes_update(decrypt_ctx, decrypted, ciphertext, 32);
     if (processed != 32) {
         printf("ERROR: AES CBC decryption failed\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(decrypt_ctx, decrypted + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC decryption finish failed\n");
         exit(1);
@@ -138,7 +138,7 @@ void test_aes_cbc_decryption() {
 void test_aes_cbc_roundtrip() {
     printf("Testing AES CBC roundtrip (encrypt -> decrypt)...\n");
     
-    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
+    crypto_core_aes_ctx *encrypt_ctx, *decrypt_ctx;
     unsigned char ciphertext[64];
     unsigned char decrypted[64];
     unsigned char random_data[64];
@@ -170,26 +170,26 @@ void test_aes_cbc_roundtrip() {
     }
     
     // Encrypt
-    int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, random_data, 64);
+    int processed = crypto_core_aes_update(encrypt_ctx, ciphertext, random_data, 64);
     if (processed != 64) {
         printf("ERROR: AES CBC encryption failed in roundtrip test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(encrypt_ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC encryption finish failed in roundtrip test\n");
         exit(1);
     }
     
     // Decrypt
-    processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, 64);
+    processed = crypto_core_aes_update(decrypt_ctx, decrypted, ciphertext, 64);
     if (processed != 64) {
         printf("ERROR: AES CBC decryption failed in roundtrip test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(decrypt_ctx, decrypted + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC decryption finish failed in roundtrip test\n");
         exit(1);
@@ -209,7 +209,7 @@ void test_aes_cbc_roundtrip() {
 void test_aes_cbc_padding() {
     printf("Testing AES CBC with different data lengths...\n");
     
-    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
+    crypto_core_aes_ctx *encrypt_ctx, *decrypt_ctx;
     unsigned char iv[16];
     size_t outlen;
     
@@ -244,7 +244,7 @@ void test_aes_cbc_padding() {
         }
         
         // Encrypt
-        int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, data, len);
+        int processed = crypto_core_aes_update(encrypt_ctx, ciphertext, data, len);
         if (processed != len) {
             printf("ERROR: AES CBC encryption failed for length %d\n", len);
             free(data);
@@ -253,7 +253,7 @@ void test_aes_cbc_padding() {
             exit(1);
         }
         
-        ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
+        ret = crypto_core_aes_finish(encrypt_ctx, ciphertext + processed, &outlen);
         if (ret != 0) {
             printf("ERROR: AES CBC encryption finish failed for length %d\n", len);
             free(data);
@@ -273,7 +273,7 @@ void test_aes_cbc_padding() {
         }
         
         // Decrypt
-        processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, len);
+        processed = crypto_core_aes_update(decrypt_ctx, decrypted, ciphertext, len);
         if (processed != len) {
             printf("ERROR: AES CBC decryption failed for length %d\n", len);
             free(data);
@@ -282,7 +282,7 @@ void test_aes_cbc_padding() {
             exit(1);
         }
         
-        ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+        ret = crypto_core_aes_finish(decrypt_ctx, decrypted + processed, &outlen);
         if (ret != 0) {
             printf("ERROR: AES CBC decryption finish failed for length %d\n", len);
             free(data);
@@ -311,7 +311,7 @@ void test_aes_cbc_padding() {
 void test_aes_cbc_iv_modification() {
     printf("Testing AES CBC IV modification behavior...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char iv1[16], iv2[16];
     size_t outlen;
     
@@ -335,13 +335,13 @@ void test_aes_cbc_iv_modification() {
         exit(1);
     }
     
-    int processed = crypto_core_aes_update(&ctx, ciphertext1, plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext1, plaintext, 16);
     if (processed != 16) {
         printf("ERROR: AES CBC encryption failed for iv1\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&ctx, ciphertext1 + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext1 + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC finish failed for iv1\n");
         exit(1);
@@ -354,13 +354,13 @@ void test_aes_cbc_iv_modification() {
         exit(1);
     }
     
-    processed = crypto_core_aes_update(&ctx, ciphertext2, plaintext, 16);
+    processed = crypto_core_aes_update(ctx, ciphertext2, plaintext, 16);
     if (processed != 16) {
         printf("ERROR: AES CBC encryption failed for iv2\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&ctx, ciphertext2 + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext2 + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES CBC finish failed for iv2\n");
         exit(1);
@@ -394,7 +394,7 @@ void test_aes256_cbc_arbitrary_length() {
     const unsigned char *message = "Hello, Bob!";
     size_t message_len = strlen(message);
     
-    crypto_core_aes_ctx enc_ctx, dec_ctx;
+    crypto_core_aes_ctx *enc_ctx, *dec_ctx;
     unsigned char ciphertext[64];
     unsigned char decrypted[64];
     unsigned char final_block[32];
@@ -405,9 +405,9 @@ void test_aes256_cbc_arbitrary_length() {
         printf("ERROR: AES-256 CBC encrypt init failed\n");
         exit(1);
     }
-    int clen = crypto_core_aes_update(&enc_ctx, ciphertext, message, message_len);
+    int clen = crypto_core_aes_update(enc_ctx, ciphertext, message, message_len);
     size_t total_clen = clen;
-    if (crypto_core_aes_finish(&enc_ctx, ciphertext + clen, &outlen) != 0) {
+    if (crypto_core_aes_finish(enc_ctx, ciphertext + clen, &outlen) != 0) {
         printf("ERROR: AES-256 CBC encrypt finish failed\n");
         exit(1);
     }
@@ -421,10 +421,10 @@ void test_aes256_cbc_arbitrary_length() {
         printf("ERROR: AES-256 CBC decrypt init failed\n");
         exit(1);
     }
-    int dlen = crypto_core_aes_update(&dec_ctx, decrypted, ciphertext, total_clen);
+    int dlen = crypto_core_aes_update(dec_ctx, decrypted, ciphertext, total_clen);
     size_t total_dlen = dlen;
     printf("dlen: %zu\n", dlen);
-    if (crypto_core_aes_finish(&dec_ctx, decrypted + dlen, &outlen) != 0) {
+    if (crypto_core_aes_finish(dec_ctx, decrypted + dlen, &outlen) != 0) {
         printf("ERROR: AES-256 CBC decrypt finish failed\n");
         exit(1);
     }

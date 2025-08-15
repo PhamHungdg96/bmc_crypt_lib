@@ -49,6 +49,7 @@ file(GLOB_RECURSE SOURCES
     "src/core.c"
     "src/utils.c"
     "src/runtime.c"
+    "src/crypto_bmc_protocol.c"
 )
 
 # Options

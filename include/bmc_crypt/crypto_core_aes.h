@@ -96,16 +96,8 @@ typedef struct {
  * @return 0 on success, -1 on failure
  */
 BMC_CRYPT_EXPORT
-int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
+int crypto_core_aes_init(crypto_core_aes_ctx **ctx,
                          const unsigned char *key,
-                         size_t keylen,
-                         aes_mode_t mode,
-                         int enc,
-                         const unsigned char *iv_nonce,
-                         size_t iv_nonce_len);
-
-BMC_CRYPT_EXPORT
-crypto_core_aes_ctx *crypto_core_aes_init_ex(const unsigned char *key,
                          size_t keylen,
                          aes_mode_t mode,
                          int enc,

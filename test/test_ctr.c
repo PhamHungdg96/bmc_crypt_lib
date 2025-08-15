@@ -398,7 +398,7 @@ void test_aes256_ctr_arbitrary_length() {
     // size_t message_len = 64;
 
     
-    crypto_core_aes_ctx enc_ctx, dec_ctx;
+    crypto_core_aes_ctx *enc_ctx, *dec_ctx;
     unsigned char ciphertext[128];
     unsigned char decrypted[128];
     unsigned char final_block[32];
@@ -409,9 +409,9 @@ void test_aes256_ctr_arbitrary_length() {
         printf("ERROR: AES-256 CBC encrypt init failed\n");
         exit(1);
     }
-    int clen = crypto_core_aes_update(&enc_ctx, ciphertext, message, message_len);
+    int clen = crypto_core_aes_update(enc_ctx, ciphertext, message, message_len);
     size_t total_clen = clen;
-    if (crypto_core_aes_finish(&enc_ctx, ciphertext + clen, &outlen) != 0) {
+    if (crypto_core_aes_finish(enc_ctx, ciphertext + clen, &outlen) != 0) {
         printf("ERROR: AES-256 CBC encrypt finish failed\n");
         exit(1);
     }
@@ -426,10 +426,10 @@ void test_aes256_ctr_arbitrary_length() {
         printf("ERROR: AES-256 CBC decrypt init failed\n");
         exit(1);
     }
-    int dlen = crypto_core_aes_update(&dec_ctx, decrypted, ciphertext, total_clen);
+    int dlen = crypto_core_aes_update(dec_ctx, decrypted, ciphertext, total_clen);
     size_t total_dlen = dlen;
     printf("dlen: %zu\n", dlen);
-    if (crypto_core_aes_finish(&dec_ctx, decrypted + dlen, &outlen) != 0) {
+    if (crypto_core_aes_finish(dec_ctx, decrypted + dlen, &outlen) != 0) {
         printf("ERROR: AES-256 CBC decrypt finish failed\n");
         exit(1);
     }

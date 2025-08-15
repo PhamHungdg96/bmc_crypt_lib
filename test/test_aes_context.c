@@ -143,7 +143,7 @@ static int test_aes128_ecb_nist(void) {
     int ret;
     
     /* Initialize for encryption */
-    ctx = crypto_core_aes_init_ex(aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
+    ctx = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
     assert(ret == 0);
     
     /* Encrypt data */
@@ -159,7 +159,7 @@ static int test_aes128_ecb_nist(void) {
     printf("  AES-128 ECB encryption matches NIST vector\n");
     
     /* Initialize for decryption */
-    ctx = crypto_core_aes_init_ex(aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
+    ctx = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
     assert(ret == 0);
     
     /* Decrypt data */
@@ -181,7 +181,7 @@ static int test_aes128_ecb_nist(void) {
 static int test_aes256_ecb_nist(void) {
     printf("Testing AES-256 ECB with NIST vector...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char ciphertext[16];
     unsigned char decrypted[16];
@@ -192,11 +192,11 @@ static int test_aes256_ecb_nist(void) {
     assert(ret == 0);
     
     /* Encrypt data */
-    int processed = crypto_core_aes_update(&ctx, ciphertext, aes256_plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext, aes256_plaintext, 16);
     assert(processed == 16);
     
     /* Finish encryption */
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     /* Verify ciphertext matches NIST vector */
@@ -208,11 +208,11 @@ static int test_aes256_ecb_nist(void) {
     assert(ret == 0);
     
     /* Decrypt data */
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, 16);
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, 16);
     assert(processed == 16);
     
     /* Finish decryption */
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption matches original plaintext */
@@ -226,7 +226,7 @@ static int test_aes256_ecb_nist(void) {
 static int test_aes128_cbc_nist(void) {
     printf("Testing AES-128 CBC with NIST vector...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char ciphertext[32];
     unsigned char decrypted[32];
     size_t outlen;
@@ -236,11 +236,11 @@ static int test_aes128_cbc_nist(void) {
     assert(ret == 0);
     
     /* Encrypt data */
-    int processed = crypto_core_aes_update(&ctx, ciphertext, aes128_cbc_plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext, aes128_cbc_plaintext, 16);
     assert(processed == 32);
     
     /* Finish encryption */
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     /* Verify ciphertext matches NIST vector */
@@ -252,11 +252,11 @@ static int test_aes128_cbc_nist(void) {
     assert(ret == 0);
     
     /* Decrypt data */
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, 32);
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, 32);
     assert(processed == 32);
     
     /* Finish decryption */
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption matches original plaintext */
@@ -270,7 +270,7 @@ static int test_aes128_cbc_nist(void) {
 static int test_aes128_ctr_nist(void) {
     printf("Testing AES-128 CTR with NIST vector...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char ciphertext[64];
     unsigned char decrypted[64];
     size_t outlen;
@@ -280,11 +280,11 @@ static int test_aes128_ctr_nist(void) {
     assert(ret == 0);
     
     /* Encrypt data */
-    int processed = crypto_core_aes_update(&ctx, ciphertext, aes128_ctr_plaintext, sizeof(aes128_ctr_plaintext));
+    int processed = crypto_core_aes_update(ctx, ciphertext, aes128_ctr_plaintext, sizeof(aes128_ctr_plaintext));
     assert(processed == sizeof(aes128_ctr_plaintext));
     
     /* Finish encryption */
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     /* Verify ciphertext matches NIST vector */
@@ -296,11 +296,11 @@ static int test_aes128_ctr_nist(void) {
     assert(ret == 0);
     
     /* Decrypt data */
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, sizeof(ciphertext));
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, sizeof(ciphertext));
     assert(processed == sizeof(ciphertext));
     
     /* Finish decryption */
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption matches original plaintext */
@@ -314,7 +314,7 @@ static int test_aes128_ctr_nist(void) {
 static int test_aes128_gcm_nist(void) {
     printf("Testing AES-128 GCM with NIST vector...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char ciphertext[16];
     unsigned char decrypted[16];
     unsigned char tag[16];
@@ -325,22 +325,22 @@ static int test_aes128_gcm_nist(void) {
     assert(ret == 0);
     
     /* Verify GCM context is created */
-    assert(ctx.mode_data.gcm.gcm_ctx != NULL);
+    assert(ctx->mode_data.gcm.gcm_ctx != NULL);
     
     /* Add AAD */
-    ret = crypto_core_aes_gcm_aad(&ctx, aes128_gcm_aad, 16);
+    ret = crypto_core_aes_gcm_aad(ctx, aes128_gcm_aad, 16);
     assert(ret == 0);
     
     /* Encrypt data */
-    int processed = crypto_core_aes_update(&ctx, ciphertext, aes128_gcm_plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext, aes128_gcm_plaintext, 16);
     assert(processed == 16);
     
     /* Finish encryption */
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     /* Get authentication tag */
-    ret = crypto_core_aes_gcm_get_tag(&ctx, tag);
+    ret = crypto_core_aes_gcm_get_tag(ctx, tag);
     assert(ret == 0);
     
     /* Verify ciphertext matches NIST vector */
@@ -352,26 +352,26 @@ static int test_aes128_gcm_nist(void) {
     printf("  AES-128 GCM tag matches NIST vector\n");
     
     /* Clean up encryption context */
-    crypto_core_aes_cleanup(&ctx);
+    crypto_core_aes_cleanup(ctx);
     
     /* Initialize for decryption */
     ret = crypto_core_aes_init(&ctx, aes128_gcm_key, 16, AES_MODE_GCM, 0, aes128_gcm_nonce, 12);
     assert(ret == 0);
     
     /* Set authentication tag */
-    ret = crypto_core_aes_gcm_set_tag(&ctx, tag);
+    ret = crypto_core_aes_gcm_set_tag(ctx, tag);
     assert(ret == 0);
     
     /* Add AAD */
-    ret = crypto_core_aes_gcm_aad(&ctx, aes128_gcm_aad, 16);
+    ret = crypto_core_aes_gcm_aad(ctx, aes128_gcm_aad, 16);
     assert(ret == 0);
     
     /* Decrypt data */
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, 16);
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, 16);
     assert(processed == 16);
     
     /* Finish decryption */
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption matches original plaintext */
@@ -379,7 +379,7 @@ static int test_aes128_gcm_nist(void) {
     printf("  AES-128 GCM decryption successful\n");
     
     /* Clean up decryption context */
-    crypto_core_aes_cleanup(&ctx);
+    crypto_core_aes_cleanup(ctx);
     
     return 0;
 }
@@ -388,7 +388,7 @@ static int test_aes128_gcm_nist(void) {
 static int test_multiple_blocks(void) {
     printf("Testing multiple blocks with padding...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
                             0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     unsigned char iv[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -405,10 +405,10 @@ static int test_multiple_blocks(void) {
     int ret = crypto_core_aes_init(&ctx, key, 16, AES_MODE_CBC, 1, iv, 16);
     assert(ret == 0);
     
-    int processed = crypto_core_aes_update(&ctx, ciphertext, (const unsigned char*)plaintext, plaintext_len);
+    int processed = crypto_core_aes_update(ctx, ciphertext, (const unsigned char*)plaintext, plaintext_len);
     assert(processed >= 0);
     
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     assert(ret == 0);
     
     printf("  CBC encrypted %d bytes (including padding)\n", processed + (int)outlen);
@@ -417,10 +417,10 @@ static int test_multiple_blocks(void) {
     ret = crypto_core_aes_init(&ctx, key, 16, AES_MODE_CBC, 0, iv, 16);
     assert(ret == 0);
     
-    processed = crypto_core_aes_update(&ctx, decrypted, ciphertext, processed + (int)outlen);
+    processed = crypto_core_aes_update(ctx, decrypted, ciphertext, processed + (int)outlen);
     assert(processed >= 0);
     
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     assert(ret == 0);
     
     /* Verify decryption */

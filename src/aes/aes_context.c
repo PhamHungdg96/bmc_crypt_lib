@@ -56,83 +56,77 @@ static void xor_block(unsigned char *out, const unsigned char *a, const unsigned
 /* =============================================================================
  * Context initialization
  * ============================================================================= */
-
-crypto_core_aes_ctx * crypto_core_aes_init_ex(
-                         const unsigned char *key,
-                         size_t keylen,
-                         aes_mode_t mode,
-                         int enc,
-                         const unsigned char *iv_nonce,
-                         size_t iv_nonce_len){
-    crypto_core_aes_ctx *ctx = bmc_crypt_malloc(sizeof(crypto_core_aes_ctx));
-    if(ctx == NULL){
-        return NULL;
-    }
-    if (crypto_core_aes_init(ctx, key, keylen, mode, enc, iv_nonce, iv_nonce_len) != 0) {
-        return NULL;
-    }
-    return ctx;                   
-}
-
-int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
+int crypto_core_aes_init(crypto_core_aes_ctx **ctx,
                          const unsigned char *key,
                          size_t keylen,
                          aes_mode_t mode,
                          int enc,
                          const unsigned char *iv_nonce,
                          size_t iv_nonce_len) {
-    if (!ctx || !key) {
+    if (ctx == NULL || key==NULL) {
         return -1;
     }
+    *ctx = bmc_crypt_malloc(sizeof(crypto_core_aes_ctx));
+    if (!(*ctx)) {
+        return -1;
+    }
+    
+    bmc_crypt_memzero(*ctx, sizeof(crypto_core_aes_ctx));
 
     if(enc!=AES_ENCRYPT && enc!=AES_DECRYPT){
-        return -1;
+        fprintf(stderr,"enc must 1 for encrypt, 0 for decrypt\n");
+        goto err;
     }
-    
     /* Validate key length */
     if (keylen != 16 && keylen != 24 && keylen != 32) {
-        return -1;
+        fprintf(stderr,"keylen must 16, 24, 32\n");
+        goto err;
     }
-    
     /* Validate IV/nonce length based on mode */
     switch (mode) {
         case AES_MODE_ECB:
             /* ECB doesn't need IV */
             break;
         case AES_MODE_CBC:
-            if (iv_nonce_len != 16) return -1;
+            if (iv_nonce_len != 16){
+                fprintf(stderr,"iv_nonce_len must 16\n");
+                goto err;
+            }
             break;
         case AES_MODE_CTR:
-            if (iv_nonce_len != 16) return -1;
+            if (iv_nonce_len != 16) {
+                fprintf(stderr,"iv_nonce_len must 16\n");
+                goto err;
+            }
             break;
         case AES_MODE_GCM:
-            if (iv_nonce_len != 12) return -1;
+            if (iv_nonce_len != 12) {
+                fprintf(stderr,"iv_nonce_len must 12\n");
+                goto err;
+            }
             break;
         default:
-            return -1;
+            fprintf(stderr,"mode must 0 for ECB, 1 for CBC, 2 for CTR, 3 for GCM\n");
+            goto err;
     }
-    
-    /* Clear context */
-    bmc_crypt_memzero(ctx, sizeof(crypto_core_aes_ctx));
-
     /* Set block cipher functions */
-    ctx->block_encrypt = AES_encrypt;
-    ctx->block_decrypt = AES_decrypt;
+    (*ctx)->block_encrypt = AES_encrypt;
+    (*ctx)->block_decrypt = AES_decrypt;
     
     /* Set mode and encryption flag */
-    ctx->mode = mode;
-    ctx->enc = enc;
+    (*ctx)->mode = mode;
+    (*ctx)->enc = enc;
     /* Set up AES key */
     int bits = (int)(keylen * 8);
-    int enc_tmp = ctx->enc;
+    int enc_tmp = (*ctx)->enc;
     if(mode == AES_MODE_CTR || mode == AES_MODE_GCM){
         enc_tmp = AES_ENCRYPT;
     }
-    int ret = crypto_core_aes_set_key(key, bits, &ctx->key, enc_tmp);
+    int ret = crypto_core_aes_set_key(key, bits, &(*ctx)->key, enc_tmp);
     if (ret != 0) {
-        return -1;
+        fprintf(stderr,"Can't set key for AES\n");
+        goto err;
     }
-    
     /* Initialize mode-specific data */
     switch (mode) {
         case AES_MODE_ECB:
@@ -141,36 +135,43 @@ int crypto_core_aes_init(crypto_core_aes_ctx *ctx,
             
         case AES_MODE_CBC:
             if (iv_nonce) {
-                memcpy(ctx->mode_data.cbc.iv, iv_nonce, 16);
+                memcpy((*ctx)->mode_data.cbc.iv, iv_nonce, 16);
             }
-            ctx->mode_data.cbc.last_block_len = 0;
+            (*ctx)->mode_data.cbc.last_block_len = 0;
             break;
             
         case AES_MODE_CTR:
             if (iv_nonce) {
-                memcpy(ctx->mode_data.ctr.nonce, iv_nonce, 16);
+                memcpy((*ctx)->mode_data.ctr.nonce, iv_nonce, 16);
             }
-            ctx->mode_data.ctr.keystream_pos = 0; /* Initialize keystream position */
+            (*ctx)->mode_data.ctr.keystream_pos = 0; /* Initialize keystream position */
             break;
             
         case AES_MODE_GCM:
-            
             /* Create and initialize GCM context */
-            ctx->mode_data.gcm.gcm_ctx = CRYPTO_gcm128_new(&ctx->key, ctx->block_encrypt);
-            if (!ctx->mode_data.gcm.gcm_ctx) {
-                return -1;
+            (*ctx)->mode_data.gcm.gcm_ctx = CRYPTO_gcm128_new(&(*ctx)->key, (*ctx)->block_encrypt);
+            if (!(*ctx)->mode_data.gcm.gcm_ctx) {
+                fprintf(stderr,"Can't initialize AES-GCM context\n");
+                goto err;
             }
             if (iv_nonce)
                 /* Set IV */
-                CRYPTO_gcm128_setiv(ctx->mode_data.gcm.gcm_ctx, iv_nonce, 12);
+                CRYPTO_gcm128_setiv((*ctx)->mode_data.gcm.gcm_ctx, iv_nonce, 12);
             
             /* Initialize tag buffer */
-            bmc_crypt_memzero(ctx->mode_data.gcm.tag, 16);
+            bmc_crypt_memzero((*ctx)->mode_data.gcm.tag, 16);
             break;
     }
-    
-    ctx->initialized = 1;
+    (*ctx)->initialized = 1;
     return 0;
+err:
+    if (mode == AES_MODE_GCM && (*ctx)->mode_data.gcm.gcm_ctx){
+        CRYPTO_gcm128_release((*ctx)->mode_data.gcm.gcm_ctx);
+    }
+    if (*ctx) {
+        bmc_crypt_free(*ctx);
+    }
+    return -1;
 }
 
 /* =============================================================================

@@ -24,7 +24,7 @@ static const unsigned char expected_ciphertext[16] = {
 void test_aes_ecb_encryption() {
     printf("Testing AES ECB encryption...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char ciphertext[16];
     size_t outlen;
@@ -37,14 +37,14 @@ void test_aes_ecb_encryption() {
     }
     
     // Encrypt data
-    int processed = crypto_core_aes_update(&ctx, ciphertext, test_plaintext, 16);
+    int processed = crypto_core_aes_update(ctx, ciphertext, test_plaintext, 16);
     if (processed != 16) {
         printf("ERROR: AES ECB encryption failed\n");
         exit(1);
     }
     
     // Finish encryption
-    ret = crypto_core_aes_finish(&ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB encryption finish failed\n");
         exit(1);
@@ -71,7 +71,7 @@ void test_aes_ecb_encryption() {
 void test_aes_ecb_decryption() {
     printf("Testing AES ECB decryption...\n");
     
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char decrypted[16];
     size_t outlen;
@@ -84,14 +84,14 @@ void test_aes_ecb_decryption() {
     }
     
     // Decrypt data
-    int processed = crypto_core_aes_update(&ctx, decrypted, expected_ciphertext, 16);
+    int processed = crypto_core_aes_update(ctx, decrypted, expected_ciphertext, 16);
     if (processed != 16) {
         printf("ERROR: AES ECB decryption failed\n");
         exit(1);
     }
     
     // Finish decryption
-    ret = crypto_core_aes_finish(&ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(ctx, decrypted + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB decryption finish failed\n");
         exit(1);
@@ -118,7 +118,7 @@ void test_aes_ecb_decryption() {
 void test_aes_ecb_roundtrip() {
     printf("Testing AES ECB roundtrip (encrypt -> decrypt)...\n");
     
-    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
+    crypto_core_aes_ctx *encrypt_ctx, *decrypt_ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char ciphertext[16];
     unsigned char decrypted[16];
@@ -145,26 +145,26 @@ void test_aes_ecb_roundtrip() {
     }
     
     // Encrypt
-    int processed = crypto_core_aes_update(&encrypt_ctx, ciphertext, random_data, 16);
+    int processed = crypto_core_aes_update(encrypt_ctx, ciphertext, random_data, 16);
     if (processed != 16) {
         printf("ERROR: AES ECB encryption failed in roundtrip test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&encrypt_ctx, ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(encrypt_ctx, ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB encryption finish failed in roundtrip test\n");
         exit(1);
     }
     
     // Decrypt
-    processed = crypto_core_aes_update(&decrypt_ctx, decrypted, ciphertext, 16);
+    processed = crypto_core_aes_update(decrypt_ctx, decrypted, ciphertext, 16);
     if (processed != 16) {
         printf("ERROR: AES ECB decryption failed in roundtrip test\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&decrypt_ctx, decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(decrypt_ctx, decrypted + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB decryption finish failed in roundtrip test\n");
         exit(1);
@@ -191,7 +191,7 @@ void test_aes_ecb_roundtrip() {
 void test_aes_ecb_multiple_blocks() {
     printf("Testing AES ECB with multiple blocks...\n");
     
-    crypto_core_aes_ctx encrypt_ctx, decrypt_ctx;
+    crypto_core_aes_ctx *encrypt_ctx, *decrypt_ctx;
     unsigned char iv[16] = {0}; /* ECB doesn't use IV */
     unsigned char multi_plaintext[32] = {
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -218,26 +218,26 @@ void test_aes_ecb_multiple_blocks() {
     }
     
     // Encrypt all blocks at once
-    int processed = crypto_core_aes_update(&encrypt_ctx, multi_ciphertext, multi_plaintext, 32);
+    int processed = crypto_core_aes_update(encrypt_ctx, multi_ciphertext, multi_plaintext, 32);
     if (processed != 32) {
         printf("ERROR: AES ECB encryption failed for multiple blocks\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&encrypt_ctx, multi_ciphertext + processed, &outlen);
+    ret = crypto_core_aes_finish(encrypt_ctx, multi_ciphertext + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB encryption finish failed for multiple blocks\n");
         exit(1);
     }
     
     // Decrypt all blocks at once
-    processed = crypto_core_aes_update(&decrypt_ctx, multi_decrypted, multi_ciphertext, 32);
+    processed = crypto_core_aes_update(decrypt_ctx, multi_decrypted, multi_ciphertext, 32);
     if (processed != 32) {
         printf("ERROR: AES ECB decryption failed for multiple blocks\n");
         exit(1);
     }
     
-    ret = crypto_core_aes_finish(&decrypt_ctx, multi_decrypted + processed, &outlen);
+    ret = crypto_core_aes_finish(decrypt_ctx, multi_decrypted + processed, &outlen);
     if (ret != 0) {
         printf("ERROR: AES ECB decryption finish failed for multiple blocks\n");
         exit(1);

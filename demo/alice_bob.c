@@ -171,7 +171,7 @@ int main() {
 
     // Giả sử message, message_len, message_key (32 bytes), iv (16 bytes), mac_key (32 bytes) đã có
 
-    crypto_core_aes_ctx ctx;
+    crypto_core_aes_ctx *ctx;
     unsigned char ciphertext[1024]; // đủ lớn cho message + padding
     unsigned char final_block[32];  // để nhận dữ liệu còn lại từ finish
     size_t outlen = 0;
@@ -185,10 +185,10 @@ int main() {
     // Mã hóa (update)
     const unsigned char *message = "Hello, Bob!";
     size_t message_len = strlen(message);
-    int clen = crypto_core_aes_update(&ctx, ciphertext, (const unsigned char*)message, message_len);
+    int clen = crypto_core_aes_update(ctx, ciphertext, (const unsigned char*)message, message_len);
     printf("clen: %d\n", clen);
     // Kết thúc (finish)
-    if (crypto_core_aes_finish(&ctx, ciphertext + clen, &outlen) != 0) {
+    if (crypto_core_aes_finish(ctx, ciphertext + clen, &outlen) != 0) {
         printf("AES CBC finish failed\n");
         return 1;
     }
