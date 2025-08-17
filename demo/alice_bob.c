@@ -8,6 +8,7 @@
 #include <bmc_crypt/crypto_hkdf_256.h> // Added for HKDF
 #include <bmc_crypt/crypto_hmacsha256.h>
 #include <bmc_crypt/crypto_core_aes.h>
+#include <bmc_crypt/crypto_bmc_protocol.h>
 
 #define PKLEN crypto_sign_ed25519_PUBLICKEYBYTES
 #define SKLEN crypto_sign_ed25519_SECRETKEYBYTES
@@ -99,8 +100,12 @@ int main() {
 
     // Alice
     crypto_sign_ed25519_keypair(alice_sign_pk, alice_sign_sk);
-    crypto_sign_ed25519_sk_to_curve25519(alice_ecdh_sk, alice_sign_sk);
-    crypto_sign_ed25519_pk_to_curve25519(alice_ecdh_pk, alice_sign_pk);
+    if(bmc_protocol_convert_ed25519_to_x25519(alice_ecdh_sk, alice_ecdh_pk, alice_sign_sk, alice_sign_pk)!=0){
+        printf("\nbmc_protocol_convert_ed25519_to_x25519 ERROR\n");
+        return 0;
+    }
+    // crypto_sign_ed25519_sk_to_curve25519(alice_ecdh_sk, alice_sign_sk);
+    // crypto_sign_ed25519_pk_to_curve25519(alice_ecdh_pk, alice_sign_pk);
     // Bob
     crypto_sign_ed25519_keypair(bob_sign_pk, bob_sign_sk);
     crypto_sign_ed25519_sk_to_curve25519(bob_ecdh_sk, bob_sign_sk);

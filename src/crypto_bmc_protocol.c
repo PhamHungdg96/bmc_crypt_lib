@@ -110,7 +110,12 @@ int bmc_protocol_convert_ed25519_to_x25519(unsigned char curve25519_sk[CURVE2551
     return 0;
 }
 
-int bmc_protocol_generate_ephemeral_keypair(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
+int bmc_protocol_generate_ed25519_keypair(unsigned char ed25519_sk[SKLEN], 
+                                            unsigned char ed25519_pk[PKLEN]){
+    return crypto_sign_ed25519_keypair(ed25519_pk, ed25519_sk);
+}
+
+int bmc_protocol_generate_x25519_keypair(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
                                             unsigned char curve25519_pk[CURVE25519_KEYLEN]){
     randombytes_buf(curve25519_sk, CURVE25519_KEYLEN);
     if(crypto_scalarmult_curve25519_base(curve25519_pk, curve25519_sk)!=0){
@@ -136,4 +141,34 @@ int bmc_protocol_verify(const unsigned char *sig,
                         unsigned long long   mlen,
                         const unsigned char ed25519_sk[PKLEN]){
     return crypto_sign_ed25519_verify_detached(sig, m, mlen, ed25519_sk);
+}
+
+int bmc_protocol_hmac_sha256_init(crypto_hmacsha256_state **state,
+                                const unsigned char *key,
+                                size_t keylen){
+    if (state == NULL || key==NULL) {
+        return -1;
+    }
+    *state = bmc_crypt_malloc(sizeof(crypto_hmacsha256_state));
+    if (!(*state)) {
+        return -1;
+    }
+    
+    return crypto_hmacsha256_init(*state, key, keylen);
+}
+
+int bmc_protocol_hmac_sha256_update(crypto_hmacsha256_state *state,
+                                  const unsigned char *in,
+                                  unsigned long long inlen){
+    return crypto_hmacsha256_update(state, in, inlen);
+}
+int bmc_protocol_hmac_sha256_finish(crypto_hmacsha256_state *state,
+                                 unsigned char *out){
+    return crypto_hmacsha256_final(state, out);
+}
+int bmc_protocol_hmac_sha256_cleanup(crypto_hmacsha256_state *state){
+    if (state){
+        bmc_crypt_free(state);
+    }
+    return 0;
 }

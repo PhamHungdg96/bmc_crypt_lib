@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <bmc_crypt/export.h>
+#include <bmc_crypt/crypto_hmacsha256.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,11 @@ int bmc_protocol_convert_ed25519_to_x25519(unsigned char curve25519_sk[CURVE2551
                             const unsigned char ed25519_pk[PKLEN]);
 
 BMC_CRYPT_EXPORT
-int bmc_protocol_generate_ephemeral_keypair(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
+int bmc_protocol_generate_ed25519_keypair(unsigned char ed25519_sk[SKLEN], 
+                                            unsigned char ed25519_pk[PKLEN]);
+
+BMC_CRYPT_EXPORT
+int bmc_protocol_generate_x25519_keypair(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
                                             unsigned char curve25519_pk[CURVE25519_KEYLEN]);
 
 BMC_CRYPT_EXPORT
@@ -59,7 +64,23 @@ int bmc_protocol_verify(const unsigned char *sig,
                         const unsigned char *m,
                         unsigned long long   mlen,
                         const unsigned char ed25519_sk[PKLEN]);
-                                
+//for hmac
+BMC_CRYPT_EXPORT
+int bmc_protocol_hmac_sha256_init(crypto_hmacsha256_state **state,
+                                const unsigned char *key,
+                                size_t keylen);
+BMC_CRYPT_EXPORT
+int bmc_protocol_hmac_sha256_update(crypto_hmacsha256_state *state,
+                                  const unsigned char *in,
+                                  unsigned long long inlen);
+
+BMC_CRYPT_EXPORT
+int bmc_protocol_hmac_sha256_finish(crypto_hmacsha256_state *state,
+                                 unsigned char *out);
+
+BMC_CRYPT_EXPORT
+int bmc_protocol_hmac_sha256_cleanup(crypto_hmacsha256_state *state);
+
 #ifdef __cplusplus
 }
 #endif
