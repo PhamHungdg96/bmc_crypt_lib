@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include <bmc_crypt/core.h>
+#include <bmc_crypt/utils.h>
 #include <bmc_crypt/crypto_hkdf_256.h>
 
 // Test vectors từ RFC 5869

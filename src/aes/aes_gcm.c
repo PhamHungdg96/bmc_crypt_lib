@@ -34,13 +34,13 @@ int crypto_core_aes128_gcm_encrypt(unsigned char *out,
     }
     
     // Create GCM context
-    ctx = CRYPTO_gcm128_new(&aes_key, aes_block);
+    ctx = CRYPTO_gcm128_new(&aes_key, (block128_f) aes_block);
     if (!ctx) {
         return -1;
     }
     
     // Initialize GCM
-    CRYPTO_gcm128_init(ctx, &aes_key, aes_block);
+    CRYPTO_gcm128_init(ctx, &aes_key, (block128_f) aes_block);
     
     // Set IV/nonce
     CRYPTO_gcm128_setiv(ctx, nonce, 12);
@@ -95,13 +95,13 @@ int crypto_core_aes128_gcm_decrypt(unsigned char *out,
     }
     
     // Create GCM context
-    ctx = CRYPTO_gcm128_new(&aes_key, aes_block);
+    ctx = CRYPTO_gcm128_new(&aes_key, (block128_f) aes_block);
     if (!ctx) {
         return -1;
     }
     
     // Initialize GCM
-    CRYPTO_gcm128_init(ctx, &aes_key, aes_block);
+    CRYPTO_gcm128_init(ctx, &aes_key, (block128_f) aes_block);
     
     // Set IV/nonce
     CRYPTO_gcm128_setiv(ctx, nonce, 12);

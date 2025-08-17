@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 #include <bmc_crypt/core.h>
 #include <bmc_crypt/randombytes.h>
 

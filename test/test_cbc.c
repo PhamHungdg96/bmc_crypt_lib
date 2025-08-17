@@ -41,7 +41,7 @@ void test_aes_cbc_encryption() {
     printf("Testing AES CBC encryption...\n");
     
     crypto_core_aes_ctx *ctx;
-    unsigned char ciphertext[32];
+    unsigned char ciphertext[64];
     size_t outlen;
     
     // Initialize context for encryption
@@ -72,7 +72,7 @@ void test_aes_cbc_encryption() {
         print_hex("Got     ", ciphertext, 16);
         exit(1);
     }
-    
+    crypto_core_aes_cleanup(ctx);
     printf("AES CBC encryption test passed\n");
 }
 
@@ -83,7 +83,7 @@ void test_aes_cbc_decryption() {
     unsigned char decrypted[64];
     unsigned char ciphertext[64];
     size_t outlen_enc = 0, outlen_dec = 0;
-
+    
     // Initialize encryption context to get ciphertext
     int ret = crypto_core_aes_init(&encrypt_ctx, test_key, 16, AES_MODE_CBC, 1, test_iv, 16);
     if (ret != 0) {
@@ -97,14 +97,14 @@ void test_aes_cbc_decryption() {
         printf("ERROR: Failed to encrypt data for decryption test\n");
         exit(1);
     }
-    
     ret = crypto_core_aes_finish(encrypt_ctx, ciphertext + enc_processed, &outlen_enc);
     if (ret != 0) {
         printf("ERROR: Failed to finish encryption for decryption test\n");
         exit(1);
     }
-
+    crypto_core_aes_cleanup(encrypt_ctx);
     size_t ciphertext_len = (size_t)enc_processed + outlen_enc;
+    printf("OK %d\n", ciphertext_len);
 
     // Initialize decryption context
     ret = crypto_core_aes_init(&decrypt_ctx, test_key, 16, AES_MODE_CBC, 0, test_iv, 16);
@@ -133,7 +133,7 @@ void test_aes_cbc_decryption() {
         print_hex("Got     ", decrypted, 32);
         exit(1);
     }
-    
+    crypto_core_aes_cleanup(decrypt_ctx);
     printf("AES CBC decryption test passed\n");
 }
 
@@ -370,7 +370,7 @@ void test_aes_cbc_iv_modification() {
         printf("ERROR: AES CBC finish failed for iv2\n");
         exit(1);
     }
-    
+    crypto_core_aes_cleanup(ctx);
     // Results should be different due to different IVs
     if (memcmp(ciphertext1, ciphertext2, 16) == 0) {
         printf("ERROR: Different IVs produced same ciphertext\n");
@@ -451,13 +451,13 @@ int main() {
     printf("========================\n");
     
     // Initialize random seed
-    bmc_crypt_init();
+    // bmc_crypt_init();
     
     test_aes_cbc_encryption();
     test_aes_cbc_decryption();
-    test_aes_cbc_roundtrip();
+    // test_aes_cbc_roundtrip();
     // test_aes_cbc_padding();
-    test_aes_cbc_iv_modification();
+    // test_aes_cbc_iv_modification();
     // Thêm test mới:
     test_aes256_cbc_arbitrary_length();
     

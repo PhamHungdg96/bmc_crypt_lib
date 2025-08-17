@@ -26,7 +26,12 @@
 # include <wincrypt.h>
 #else
 # include <unistd.h>
+#ifdef HAVE_MLOCK
+#include <sys/mman.h>
 #endif
+#endif
+
+
 
 #ifndef HAVE_C_VARARRAYS
 # ifdef HAVE_ALLOCA_H

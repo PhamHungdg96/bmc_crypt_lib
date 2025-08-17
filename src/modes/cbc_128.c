@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 #include <bmc_crypt/private/modes.h>
 
 #if !defined(STRICT_ALIGNMENT) && !defined(PEDANTIC)

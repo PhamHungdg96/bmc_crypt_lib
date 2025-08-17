@@ -110,8 +110,8 @@ int crypto_core_aes_init(crypto_core_aes_ctx **ctx,
             goto err;
     }
     /* Set block cipher functions */
-    (*ctx)->block_encrypt = AES_encrypt;
-    (*ctx)->block_decrypt = AES_decrypt;
+    (*ctx)->block_encrypt = (block128_f) AES_encrypt;
+    (*ctx)->block_decrypt = (block128_f) AES_decrypt;
     
     /* Set mode and encryption flag */
     (*ctx)->mode = mode;

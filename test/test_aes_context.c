@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <bmc_crypt/core.h>
 #include <bmc_crypt/crypto_core_aes.h>
 #include <bmc_crypt/randombytes.h>
 
@@ -143,7 +144,7 @@ static int test_aes128_ecb_nist(void) {
     int ret;
     
     /* Initialize for encryption */
-    ctx = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
+    ret = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 1, iv, 16);
     assert(ret == 0);
     
     /* Encrypt data */
@@ -159,7 +160,7 @@ static int test_aes128_ecb_nist(void) {
     printf("  AES-128 ECB encryption matches NIST vector\n");
     
     /* Initialize for decryption */
-    ctx = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
+    ret = crypto_core_aes_init(&ctx, aes128_key, 16, AES_MODE_ECB, 0, iv, 16);
     assert(ret == 0);
     
     /* Decrypt data */
