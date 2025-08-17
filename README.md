@@ -64,7 +64,7 @@ cd build_android
 
 2. **Configure project:**
 ```bash
-cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/Users/APC/AppData/Local/Android/Sdk/ndk/25.2.9519653/build/cmake/android.toolchain.cmake" \
+cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/Users/PAM/AppData/Local/Android/Sdk/ndk/29.0.13599879/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=arm64-v8a \
     -DANDROID_PLATFORM=android-24 \
     -DCMAKE_BUILD_TYPE=Release \

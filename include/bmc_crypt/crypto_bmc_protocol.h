@@ -81,6 +81,17 @@ int bmc_protocol_hmac_sha256_finish(crypto_hmacsha256_state *state,
 BMC_CRYPT_EXPORT
 int bmc_protocol_hmac_sha256_cleanup(crypto_hmacsha256_state *state);
 
+BMC_CRYPT_EXPORT
+int bmc_protocol_encrypt(unsigned char *ciphertext, size_t *ciphertext_len,
+                        const unsigned char *plaintext, size_t plaintext_len,
+                        const unsigned char *key, const unsigned char *iv,
+                        const unsigned char *mac_key);
+BMC_CRYPT_EXPORT
+int bmc_protocol_decrypt(unsigned char *plaintext, size_t *plaintext_len,
+                        const unsigned char *ciphertext, size_t ciphertext_len,
+                        const unsigned char *key, const unsigned char *iv,
+                        const unsigned char *mac_key);
+
 #ifdef __cplusplus
 }
 #endif

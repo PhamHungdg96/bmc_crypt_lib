@@ -8,6 +8,7 @@
 #include <bmc_crypt/utils.h>
 #include <bmc_crypt/crypto_hkdf_256.h> // Added for HKDF
 #include <bmc_crypt/crypto_hmacsha256.h>
+#include <bmc_crypt/crypto_core_aes.h>
 
 // Hàm dẫn xuất khóa phiên từ shared secret
 int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
@@ -171,4 +172,102 @@ int bmc_protocol_hmac_sha256_cleanup(crypto_hmacsha256_state *state){
         bmc_crypt_free(state);
     }
     return 0;
+}
+
+int bmc_protocol_encrypt(unsigned char **ciphertext, size_t *ciphertext_len,
+    const unsigned char *plaintext, size_t plaintext_len,
+    const unsigned char *key, const unsigned char *iv,
+    const unsigned char *mac_key){
+    crypto_core_aes_ctx *ctx;
+    size_t outlen = 0;
+    if(key == NULL || iv == NULL || mac_key == NULL){
+        return -1;
+    }
+    if(ciphertext == NULL || plaintext == NULL){
+        return -1;
+    }
+    unsigned char *ciphertext_tmp = NULL;
+    ciphertext_tmp = bmc_crypt_malloc(plaintext_len + 16);
+    if(ciphertext_tmp == NULL){
+        goto err;
+    }
+
+    if(crypto_core_aes_init(&ctx, key, 32, AES_MODE_CBC, 1, iv, 16) != 0){
+        goto err;
+    }
+    int clen = crypto_core_aes_update(ctx, ciphertext_tmp, plaintext, plaintext_len);
+    size_t total_clen = clen;
+    if(crypto_core_aes_finish(ctx, ciphertext_tmp + clen, &outlen) != 0){
+        goto err;
+    }
+    total_clen += outlen;
+    *ciphertext = bmc_crypt_malloc(total_clen+32);
+    if(*ciphertext == NULL){
+        goto err;
+    }
+    memcpy(*ciphertext, ciphertext_tmp, total_clen);
+    crypto_core_aes_cleanup(ctx);
+
+    unsigned char mac[32];
+    crypto_hmacsha256(mac, ciphertext_tmp, total_clen, mac_key, 32);
+    memcpy(*ciphertext + total_clen, mac, 32);
+    *ciphertext_len = total_clen+32;
+    bmc_crypt_free(ciphertext_tmp);
+    return 0;
+err:
+    crypto_core_aes_cleanup(ctx);
+    bmc_crypt_free(ciphertext_tmp);
+    return -1;
+}
+
+int bmc_protocol_decrypt(unsigned char **plaintext, size_t *plaintext_len,
+    const unsigned char *ciphertext, size_t ciphertext_len,
+    const unsigned char *key, const unsigned char *iv,
+    const unsigned char *mac_key){
+    crypto_core_aes_ctx *ctx;
+    size_t outlen=0;
+    if(key == NULL || iv == NULL || mac_key == NULL){
+        return -1;
+    }
+    if(ciphertext == NULL || plaintext == NULL){
+        return -1;
+    }
+    if(ciphertext_len < 32){
+        return -1;
+    }
+    unsigned char mac[32];
+    memcpy(mac, ciphertext + ciphertext_len - 32, 32);
+    ciphertext_len -= 32;
+    if(crypto_hmacsha256_verify(mac, ciphertext, ciphertext_len, mac_key, 32) != 0){
+        return -1;
+    }
+
+    if(crypto_core_aes_init(&ctx, key, 32, AES_MODE_CBC, 0, iv, 16) != 0){
+        return -1;
+    }
+    unsigned char *plaintext_tmp = NULL;
+    plaintext_tmp = bmc_crypt_malloc(ciphertext_len);
+    if(plaintext_tmp == NULL){
+        goto err;
+    }
+    int dlen = crypto_core_aes_update(ctx, plaintext_tmp, ciphertext, ciphertext_len);
+    size_t total_dlen = dlen;
+    
+    if(crypto_core_aes_finish(ctx, plaintext_tmp + dlen, &outlen) != 0){
+        goto err;
+    }
+    total_dlen += outlen;
+    *plaintext = bmc_crypt_malloc(total_dlen);
+    if(*plaintext == NULL){
+        goto err;
+    }
+    memcpy(*plaintext, plaintext_tmp, total_dlen);
+    *plaintext_len = total_dlen;
+    crypto_core_aes_cleanup(ctx);
+    bmc_crypt_free(plaintext_tmp);
+    return 0;
+err:
+    crypto_core_aes_cleanup(ctx);
+    bmc_crypt_free(plaintext_tmp);
+    return -1;
 }

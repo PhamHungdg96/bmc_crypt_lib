@@ -123,14 +123,17 @@ int main() {
     // 2. Alice gửi tin nhắn cho Bob
     // Alice sinh khóa tạm thời
     unsigned char alice_tmp_sk[CURVE25519_KEYLEN], alice_tmp_pk[CURVE25519_KEYLEN];
-    randombytes_buf(alice_tmp_sk, CURVE25519_KEYLEN);
-    crypto_scalarmult_curve25519_base(alice_tmp_pk, alice_tmp_sk);
+    // randombytes_buf(alice_tmp_sk, CURVE25519_KEYLEN);
+    bmc_protocol_generate_x25519_keypair(alice_tmp_sk, alice_tmp_pk);
     print_hex("Alice ephemeral pk", alice_tmp_pk, CURVE25519_KEYLEN);
     print_hex("Alice ephemeral sk", alice_tmp_sk, CURVE25519_KEYLEN);
 
     // Alice tính shared secret với Bob (ECDH)
     unsigned char alice_shared[CURVE25519_KEYLEN];
-    crypto_scalarmult_curve25519(alice_shared, alice_tmp_sk, bob_ecdh_pk);
+    if(crypto_scalarmult_curve25519(alice_shared, alice_tmp_sk, bob_ecdh_pk)!=0){
+        printf("\n crypto_scalarmult_curve25519 ERROR\n");
+        return 0;
+    }
     print_hex("Alice shared secret", alice_shared, CURVE25519_KEYLEN);
 
     // Alice ký khóa tạm thời
@@ -174,39 +177,32 @@ int main() {
     print_hex("MAC key", mac_key, 32);
     print_hex("IV", iv, 16);
 
-    // Giả sử message, message_len, message_key (32 bytes), iv (16 bytes), mac_key (32 bytes) đã có
+    const unsigned char key_test[32] = {
+        0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
+        0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+        0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
+        0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4
+    };
+    const unsigned char iv_test[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
 
-    crypto_core_aes_ctx *ctx;
-    unsigned char ciphertext[1024]; // đủ lớn cho message + padding
-    unsigned char final_block[32];  // để nhận dữ liệu còn lại từ finish
-    size_t outlen = 0;
-
-    // Khởi tạo context AES CBC
-    if (crypto_core_aes_init(&ctx, message_key, 32, AES_MODE_CBC, 1, iv, 16) != 0) {
-        printf("AES CBC init failed\n");
-        return 1;
-    }
-
-    // Mã hóa (update)
     const unsigned char *message = "Hello, Bob!";
     size_t message_len = strlen(message);
-    int clen = crypto_core_aes_update(ctx, ciphertext, (const unsigned char*)message, message_len);
-    printf("clen: %d\n", clen);
-    // Kết thúc (finish)
-    if (crypto_core_aes_finish(ctx, ciphertext + clen, &outlen) != 0) {
-        printf("AES CBC finish failed\n");
-        return 1;
-    }
-    size_t total_clen = clen + outlen;
+    print_hex("message", message, message_len);
 
-    // Tính HMAC tag cho ciphertext
-    // unsigned char tag[32];
-    // crypto_hmacsha256(tag, ciphertext, outlen, mac_key, 32);
+    unsigned char *ciphertext = NULL;
+    size_t ciphertext_len = 0;
+    bmc_protocol_encrypt(&ciphertext, &ciphertext_len, message, message_len, message_key, iv, mac_key);
+    print_hex("Ciphertext", ciphertext, ciphertext_len);
 
-    printf("total_clen: %zu\n", total_clen);
-    // In kết quả
-    print_hex("Ciphertext", ciphertext, total_clen);
-    // print_hex("HMAC tag", tag, 32);
-
+    unsigned char *plaintext = NULL;
+    size_t plaintext_len = 0;
+    bmc_protocol_decrypt(&plaintext, &plaintext_len, ciphertext, ciphertext_len, message_key, iv, mac_key);
+    print_hex("Ciphertext", plaintext, plaintext_len);
+    
+    bmc_crypt_free(ciphertext);
+    bmc_crypt_free(plaintext);
     return 0;
 }

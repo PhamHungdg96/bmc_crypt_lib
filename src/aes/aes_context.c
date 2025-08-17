@@ -318,7 +318,7 @@ int crypto_core_aes_cleanup(crypto_core_aes_ctx *ctx) {
     }
     
     /* Clear context */
-    bmc_crypt_memzero(ctx, sizeof(crypto_core_aes_ctx));
+    bmc_crypt_free(ctx);
     return 0;
 }
 

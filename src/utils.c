@@ -659,6 +659,9 @@ bmc_crypt_allocarray(size_t count, size_t size)
 void
 bmc_crypt_free(void *ptr)
 {
+    if (ptr == NULL) {
+        return;
+    }
     free(ptr);
 }
 #else
