@@ -19,6 +19,12 @@ extern "C" {
 #define KEY_LEN 32U
 #define MAC_LEN 32U
 #define IV_LEN 16U
+// GCM uses 16 byte tag
+#define GCM_TAG_LEN 16
+#define GCM_NONCE_LEN 12
+
+BMC_CRYPT_EXPORT
+void bmc_protocol_rand(void * const buf, const size_t size);
 
 //common
 BMC_CRYPT_EXPORT
@@ -34,6 +40,14 @@ int bmc_protocol_derive_message_keys(const unsigned char *chain_key,
                         unsigned char *next_chain_key,
                         unsigned char *mac_key,
                         unsigned char *iv);
+
+BMC_CRYPT_EXPORT 
+int bmc_protocol_derive_message_keys_ex(const unsigned char *chain_key,
+                                const unsigned char *salt, size_t salt_len,
+                                unsigned char *message_key,
+                                unsigned char *next_chain_key,
+                                unsigned char *mac_key,
+                                unsigned char *iv);
 
 BMC_CRYPT_EXPORT
 int bmc_protocol_convert_ed25519_to_x25519(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
@@ -91,6 +105,18 @@ int bmc_protocol_decrypt(unsigned char **plaintext, size_t *plaintext_len,
                         const unsigned char *ciphertext, size_t ciphertext_len,
                         const unsigned char *key, const unsigned char *iv,
                         const unsigned char *mac_key);
+
+BMC_CRYPT_EXPORT
+int bmc_protocol_encrypt_aead(unsigned char **ciphertext, size_t *ciphertext_len,
+                        const unsigned char *plaintext, size_t plaintext_len, 
+                        const unsigned char *aad, size_t aad_len,
+                        const unsigned char *key, const unsigned char *nonce);
+
+BMC_CRYPT_EXPORT
+int bmc_protocol_decrypt_aead(unsigned char **plaintext, size_t *plaintext_len,
+                        const unsigned char *ciphertext, size_t ciphertext_len,
+                        const unsigned char *aad, size_t aad_len,
+                        const unsigned char *key, const unsigned char *nonce);
 
 #ifdef __cplusplus
 }

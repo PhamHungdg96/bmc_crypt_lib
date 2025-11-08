@@ -21,76 +21,6 @@ void print_hex(const char *label, const unsigned char *data, size_t len) {
     printf("\n");
 }
 
-// Hàm dẫn xuất 3 khóa từ shared secret, ephemeral_pk, bob_ecdh_pk
-int derive_session_keys(const unsigned char *shared_secret,
-                       const unsigned char *ephemeral_pk,
-                       const unsigned char *bob_ecdh_pk,
-                       unsigned char *root_key,
-                       unsigned char *send_chain_key,
-                       unsigned char *recv_chain_key) {
-    unsigned char salt[crypto_hash_sha256_BYTES];
-    unsigned char salt_input[CURVE25519_KEYLEN * 2];
-    memcpy(salt_input, ephemeral_pk, CURVE25519_KEYLEN);
-    memcpy(salt_input + CURVE25519_KEYLEN, bob_ecdh_pk, CURVE25519_KEYLEN);
-    crypto_hash_sha256(salt, salt_input, sizeof(salt_input));
-
-    const char info[] = "BMC_KDF_CTX";
-    hkdf_context *hkdf_ctx = NULL;
-    unsigned char *derived = NULL;
-    int ret = hkdf_create(&hkdf_ctx);
-    if (ret != 0) {
-        return 1;
-    }
-    ret = hkdf_derive_secrets(hkdf_ctx, &derived,
-        shared_secret, CURVE25519_KEYLEN,
-        salt, crypto_hash_sha256_BYTES,
-        (const unsigned char*)info, strlen(info),
-        32 * 3
-    );
-    if (ret != 0 || !derived) {
-        hkdf_destroy(hkdf_ctx);
-        return 1;
-    }
-    memcpy(root_key, derived, 32);
-    memcpy(send_chain_key, derived + 32, 32);
-    memcpy(recv_chain_key, derived + 64, 32);
-    hkdf_destroy(hkdf_ctx);
-    bmc_crypt_free(derived);
-    return 0;
-}
-
-// Hàm dẫn xuất message_key, next_chain_key, mac_key từ chain_key bằng HKDF
-int derive_message_key_and_next_chain_key(const unsigned char *chain_key, 
-                                            unsigned char *message_key, 
-                                            unsigned char *next_chain_key, 
-                                            unsigned char *mac_key,
-                                            unsigned char *iv) {
-    const char info[] = "BMC_MSG_CTX";
-    hkdf_context *hkdf_ctx = NULL;
-    unsigned char *derived = NULL;
-    int ret = hkdf_create(&hkdf_ctx);
-    if (ret != 0) {
-        return 1;
-    }
-    ret = hkdf_derive_secrets(hkdf_ctx, &derived,
-        chain_key, 32, // input_key_material
-        NULL, 0,       // salt (NULL)
-        (const unsigned char*)info, strlen(info),
-        32 * 3 + 16         // output_len
-    );
-    if (ret != 0 || !derived) {
-        hkdf_destroy(hkdf_ctx);
-        return 1;
-    }
-    memcpy(message_key, derived, 32);
-    memcpy(next_chain_key, derived + 32, 32);
-    memcpy(mac_key, derived + 64, 32);
-    memcpy(iv, derived + 96, 16);
-    hkdf_destroy(hkdf_ctx);
-    bmc_crypt_free(derived);
-    return 0;
-}
-
 int main() {
     // 1. Sinh khóa cho Alice và Bob
     unsigned char alice_sign_pk[PKLEN], alice_sign_sk[SKLEN];
@@ -99,24 +29,32 @@ int main() {
     unsigned char bob_ecdh_sk[CURVE25519_KEYLEN], bob_ecdh_pk[CURVE25519_KEYLEN];
 
     // Alice
-    crypto_sign_ed25519_keypair(alice_sign_pk, alice_sign_sk);
+    bmc_protocol_generate_ed25519_keypair(alice_sign_sk, alice_sign_pk);
+    print_hex("Alice sign pk", alice_sign_pk, PKLEN);
+    print_hex("Alice sign sk", alice_sign_sk, SKLEN);
     if(bmc_protocol_convert_ed25519_to_x25519(alice_ecdh_sk, alice_ecdh_pk, alice_sign_sk, alice_sign_pk)!=0){
-        printf("\nbmc_protocol_convert_ed25519_to_x25519 ERROR\n");
+        printf("\nalice_bmc_protocol_convert_ed25519_to_x25519 ERROR\n");
         return 0;
     }
     // crypto_sign_ed25519_sk_to_curve25519(alice_ecdh_sk, alice_sign_sk);
     // crypto_sign_ed25519_pk_to_curve25519(alice_ecdh_pk, alice_sign_pk);
     // Bob
-    crypto_sign_ed25519_keypair(bob_sign_pk, bob_sign_sk);
-    crypto_sign_ed25519_sk_to_curve25519(bob_ecdh_sk, bob_sign_sk);
-    crypto_sign_ed25519_pk_to_curve25519(bob_ecdh_pk, bob_sign_pk);
-
-    print_hex("Alice sign pk", alice_sign_pk, PKLEN);
-    print_hex("Alice sign sk", alice_sign_sk, SKLEN);
-    print_hex("Alice ecdh pk", alice_ecdh_pk, CURVE25519_KEYLEN);
-    print_hex("Alice ecdh sk", alice_ecdh_sk, CURVE25519_KEYLEN);
+    bmc_protocol_generate_ed25519_keypair(bob_sign_sk,bob_sign_pk);
     print_hex("Bob sign pk", bob_sign_pk, PKLEN);
     print_hex("Bob sign sk", bob_sign_sk, SKLEN);
+    if(bmc_protocol_convert_ed25519_to_x25519(bob_ecdh_sk, bob_ecdh_pk, bob_sign_sk, bob_sign_pk)!=0){
+        printf("\nbob_bmc_protocol_convert_ed25519_to_x25519 ERROR\n");
+        return 0;
+    }
+    // crypto_sign_ed25519_sk_to_curve25519(bob_ecdh_sk, bob_sign_sk);
+    // crypto_sign_ed25519_pk_to_curve25519(bob_ecdh_pk, bob_sign_pk);
+
+    // print_hex("Alice sign pk", alice_sign_pk, PKLEN);
+    // print_hex("Alice sign sk", alice_sign_sk, SKLEN);
+    print_hex("Alice ecdh pk", alice_ecdh_pk, CURVE25519_KEYLEN);
+    print_hex("Alice ecdh sk", alice_ecdh_sk, CURVE25519_KEYLEN);
+    // print_hex("Bob sign pk", bob_sign_pk, PKLEN);
+    // print_hex("Bob sign sk", bob_sign_sk, SKLEN);
     print_hex("Bob ecdh pk", bob_ecdh_pk, CURVE25519_KEYLEN);
     print_hex("Bob ecdh sk", bob_ecdh_sk, CURVE25519_KEYLEN);
 
@@ -130,7 +68,7 @@ int main() {
 
     // Alice tính shared secret với Bob (ECDH)
     unsigned char alice_shared[CURVE25519_KEYLEN];
-    if(crypto_scalarmult_curve25519(alice_shared, alice_tmp_sk, bob_ecdh_pk)!=0){
+    if(bmc_protocol_caculate_secret(alice_shared, alice_tmp_sk, bob_ecdh_pk)!=0){
         printf("\n crypto_scalarmult_curve25519 ERROR\n");
         return 0;
     }
@@ -139,17 +77,17 @@ int main() {
     // Alice ký khóa tạm thời
     unsigned char sig[SIGLEN];
     unsigned long long siglen = 0;
-    crypto_sign_ed25519_detached(sig, &siglen, alice_tmp_pk, CURVE25519_KEYLEN, alice_sign_sk);
+    bmc_protocol_sign(sig, &siglen, alice_tmp_pk, CURVE25519_KEYLEN, alice_sign_sk);
     print_hex("Alice signature on ephemeral pk", sig, SIGLEN);
 
     // Alice gửi: alice_tmp_pk, sig cho Bob
     // 3. Bob nhận và xác minh
-    int verify = crypto_sign_ed25519_verify_detached(sig, alice_tmp_pk, CURVE25519_KEYLEN, alice_sign_pk);
+    int verify = bmc_protocol_verify(sig, alice_tmp_pk, CURVE25519_KEYLEN, alice_sign_pk);
     printf("Bob verify signature: %s\n", verify == 0 ? "OK" : "FAIL");
 
     // Bob tính shared secret với khóa tạm thời của Alice
     unsigned char bob_shared[CURVE25519_KEYLEN];
-    crypto_scalarmult_curve25519(bob_shared, bob_ecdh_sk, alice_tmp_pk);
+    bmc_protocol_caculate_secret(bob_shared, bob_ecdh_sk, alice_tmp_pk);
     print_hex("Bob shared secret", bob_shared, CURVE25519_KEYLEN);
 
     // So sánh shared secret
@@ -157,7 +95,7 @@ int main() {
 
     // 4. Alice và Bob dẫn xuất khóa
     unsigned char root_key[32], send_chain_key[32], recv_chain_key[32];
-    if (derive_session_keys(alice_shared, alice_tmp_pk, bob_ecdh_pk, root_key, send_chain_key, recv_chain_key) != 0) {
+    if (bmc_protocol_derive_session_keys(alice_shared, alice_tmp_pk, bob_ecdh_pk, root_key, send_chain_key, recv_chain_key) != 0) {
         printf("derive_session_keys failed\n");
         return 1;
     }
@@ -165,28 +103,23 @@ int main() {
     print_hex("Send chain key", send_chain_key, 32);
     print_hex("Recv chain key", recv_chain_key, 32);
 
-    // Ví dụ sử dụng hàm derive_message_key_and_next_chain_key với send_chain_key
-    unsigned char message_key[32], next_chain_key[32], mac_key[32], iv[16];
-    print_hex("Input send_chain_key", send_chain_key, 32);
-    if (derive_message_key_and_next_chain_key(send_chain_key, message_key, next_chain_key, mac_key, iv) != 0) {
-        printf("derive_message_key_and_next_chain_key failed\n");
-        return 1;
-    }
-    print_hex("Message key", message_key, 32);
-    print_hex("Next chain key", next_chain_key, 32);
-    print_hex("MAC key", mac_key, 32);
-    print_hex("IV", iv, 16);
-
-    const unsigned char key_test[32] = {
+    unsigned char message_key[32], iv[16];
+    const unsigned char aad[32] = {
         0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
         0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
         0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
         0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4
     };
-    const unsigned char iv_test[16] = {
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-    };
+    if (bmc_protocol_derive_message_keys_ex(send_chain_key, aad, 32, message_key, NULL, NULL, iv) != 0) {
+        printf("bmc_protocol_derive_message_keys_ex failed\n");
+        return 1;
+    }
+
+    
+    print_hex("Message key", message_key, 32);
+    // print_hex("Next chain key", next_chain_key, 32);
+    // print_hex("MAC key", mac_key, 32);
+    print_hex("IV", iv, 16);
 
     const unsigned char *message = "Hello, Bob!";
     size_t message_len = strlen(message);
@@ -194,13 +127,14 @@ int main() {
 
     unsigned char *ciphertext = NULL;
     size_t ciphertext_len = 0;
-    bmc_protocol_encrypt(&ciphertext, &ciphertext_len, message, message_len, message_key, iv, mac_key);
+    bmc_protocol_encrypt_aead(&ciphertext, &ciphertext_len, message, message_len, aad, 32, message_key, iv);
     print_hex("Ciphertext", ciphertext, ciphertext_len);
 
     unsigned char *plaintext = NULL;
     size_t plaintext_len = 0;
-    bmc_protocol_decrypt(&plaintext, &plaintext_len, ciphertext, ciphertext_len, message_key, iv, mac_key);
-    print_hex("Ciphertext", plaintext, plaintext_len);
+    int ret = bmc_protocol_decrypt_aead(&plaintext, &plaintext_len, ciphertext, ciphertext_len, aad, 32, message_key, iv);
+    assert(ret == 0);
+    print_hex("plaintext", plaintext, plaintext_len);
     
     bmc_crypt_free(ciphertext);
     bmc_crypt_free(plaintext);

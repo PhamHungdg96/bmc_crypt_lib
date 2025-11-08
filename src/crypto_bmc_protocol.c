@@ -10,6 +10,10 @@
 #include <bmc_crypt/crypto_hmacsha256.h>
 #include <bmc_crypt/crypto_core_aes.h>
 
+void bmc_protocol_rand(void * const buf, const size_t size){
+    randombytes_buf(buf, size);
+}
+
 // Hàm dẫn xuất khóa phiên từ shared secret
 int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
                                const unsigned char *ephemeral_pk,
@@ -60,13 +64,25 @@ int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
 
 // Hàm dẫn xuất message key, next chain key, mac key và IV
 int bmc_protocol_derive_message_keys(const unsigned char *chain_key,
-                               unsigned char *message_key,
-                               unsigned char *next_chain_key,
-                               unsigned char *mac_key,
-                               unsigned char *iv) {
+                                unsigned char *message_key,
+                                unsigned char *next_chain_key,
+                                unsigned char *mac_key,
+                                unsigned char *iv){
+    return bmc_protocol_derive_message_keys_ex(chain_key, NULL, 0, message_key, next_chain_key, mac_key, iv);
+}
+
+
+int bmc_protocol_derive_message_keys_ex(const unsigned char *chain_key,
+                                const unsigned char *salt, size_t salt_len,
+                                unsigned char *message_key,
+                                unsigned char *next_chain_key,
+                                unsigned char *mac_key,
+                                unsigned char *iv) {
     const char info[] = "BMC_MSG_KDF";
     hkdf_context *hkdf_ctx = NULL;
     unsigned char *derived = NULL;
+    unsigned char *p;
+    unsigned int derived_len = 0;
 
     if(!chain_key){
         return -1;
@@ -76,22 +92,51 @@ int bmc_protocol_derive_message_keys(const unsigned char *chain_key,
     if (ret != 0) {
         return -1;
     }
+
+    if(message_key){
+        derived_len+=KEY_LEN;
+    }
+    if(next_chain_key){
+        derived_len+=KEY_LEN;
+    }
+    if(mac_key){
+        derived_len+=KEY_LEN;
+    }
+    if(iv){
+        derived_len+=IV_LEN;
+    }
+
+    if(derived_len == 0){
+        return -1;
+    }
     
     ret = hkdf_derive_secrets(hkdf_ctx, &derived,
-                             chain_key, KEY_LEN,
-                             NULL, 0,
-                             (const unsigned char*)info, strlen(info),
-                             KEY_LEN * 3 + IV_LEN);
+                            chain_key, KEY_LEN,
+                            salt, salt_len,
+                            (const unsigned char*)info, strlen(info),
+                            derived_len);
     
     if (ret != 0 || !derived) {
         hkdf_destroy(hkdf_ctx);
         return -1;
     }
-    
-    memcpy(message_key, derived, KEY_LEN);
-    memcpy(next_chain_key, derived + KEY_LEN, KEY_LEN);
-    memcpy(mac_key, derived + KEY_LEN * 2, KEY_LEN);
-    memcpy(iv, derived + KEY_LEN * 3, IV_LEN);
+    p = derived;
+    if(message_key){
+        memcpy(message_key, p, KEY_LEN);
+        p = p+KEY_LEN;
+    }
+    if(next_chain_key){
+        memcpy(next_chain_key, p, KEY_LEN);
+        p = p+KEY_LEN;
+    }
+    if(mac_key){
+        memcpy(mac_key, p, KEY_LEN);
+        p = p+KEY_LEN;
+    }
+    if(iv){
+        memcpy(iv, p, IV_LEN);
+        p = p+IV_LEN;
+    }
     
     hkdf_destroy(hkdf_ctx);
     bmc_crypt_free(derived);
@@ -269,5 +314,153 @@ int bmc_protocol_decrypt(unsigned char **plaintext, size_t *plaintext_len,
 err:
     crypto_core_aes_cleanup(ctx);
     bmc_crypt_free(plaintext_tmp);
+    return -1;
+}
+
+int bmc_protocol_encrypt_aead(unsigned char **ciphertext, size_t *ciphertext_len,
+    const unsigned char *plaintext, size_t plaintext_len, const unsigned char *aad,
+    size_t aad_len, const unsigned char *key, const unsigned char *nonce)
+{   
+    crypto_core_aes_ctx *ctx = NULL;
+    unsigned char tag[GCM_TAG_LEN];
+    size_t outlen = 0;
+    int ret = -1;
+    
+    if(key == NULL || nonce == NULL){
+        return -1;
+    }
+    if(ciphertext == NULL || plaintext == NULL){
+        return -1;
+    }
+    
+    // Allocate memory for ciphertext + tag
+    *ciphertext = bmc_crypt_malloc(plaintext_len + GCM_TAG_LEN);
+    if(*ciphertext == NULL){
+        return -1;
+    }
+    
+    // Initialize AES-256-GCM context for encryption (key is 32 bytes)
+    ret = crypto_core_aes_init(&ctx, key, KEY_LEN, AES_MODE_GCM, 1, nonce, GCM_NONCE_LEN);
+    if(ret != 0){
+        goto err;
+    }
+    
+    // Add AAD if provided
+    if(aad != NULL && aad_len > 0){
+        ret = crypto_core_aes_gcm_aad(ctx, aad, aad_len);
+        if(ret != 0){
+            goto err;
+        }
+    }
+    
+    // Encrypt data
+    int processed = crypto_core_aes_update(ctx, *ciphertext, plaintext, plaintext_len);
+    if(processed < 0){
+        goto err;
+    }
+    
+    // Finish encryption
+    ret = crypto_core_aes_finish(ctx, *ciphertext + processed, &outlen);
+    if(ret != 0){
+        goto err;
+    }
+    
+    // Get authentication tag
+    ret = crypto_core_aes_gcm_get_tag(ctx, tag);
+    if(ret != 0){
+        goto err;
+    }
+    
+    // Append tag to ciphertext
+    memcpy(*ciphertext + plaintext_len, tag, GCM_TAG_LEN);
+    *ciphertext_len = plaintext_len + GCM_TAG_LEN;
+    
+    crypto_core_aes_cleanup(ctx);
+    return 0;
+    
+err:
+    crypto_core_aes_cleanup(ctx);
+    if(*ciphertext){
+        bmc_crypt_free(*ciphertext);
+        *ciphertext = NULL;
+    }
+    return -1;
+}
+
+int bmc_protocol_decrypt_aead(unsigned char **plaintext, size_t *plaintext_len,
+    const unsigned char *ciphertext, size_t ciphertext_len, const unsigned char *aad,
+    size_t aad_len, const unsigned char *key, const unsigned char *nonce)
+{ 
+    crypto_core_aes_ctx *ctx = NULL;
+    unsigned char tag[GCM_TAG_LEN];
+    size_t outlen = 0;
+    int ret = -1;
+    
+    if(key == NULL || nonce == NULL){
+        return -1;
+    }
+    if(ciphertext == NULL || plaintext == NULL){
+        return -1;
+    }
+    
+    // Ciphertext must contain at least the tag
+    if(ciphertext_len < GCM_TAG_LEN){
+        return -1;
+    }
+    
+    size_t actual_ciphertext_len = ciphertext_len - GCM_TAG_LEN;
+    
+    // Extract tag from end of ciphertext
+    memcpy(tag, ciphertext + actual_ciphertext_len, GCM_TAG_LEN);
+    
+    // Allocate memory for plaintext
+    *plaintext = bmc_crypt_malloc(actual_ciphertext_len);
+    if(*plaintext == NULL){
+        return -1;
+    }
+    
+    // Initialize AES-256-GCM context for decryption (key is 32 bytes)
+    ret = crypto_core_aes_init(&ctx, key, KEY_LEN, AES_MODE_GCM, 0, nonce, GCM_NONCE_LEN);
+    if(ret != 0){
+        goto err;
+    }
+    
+    // Set authentication tag
+    ret = crypto_core_aes_gcm_set_tag(ctx, tag);
+    if(ret != 0){
+        goto err;
+    }
+    
+    // Add AAD if provided
+    if(aad != NULL && aad_len > 0){
+        ret = crypto_core_aes_gcm_aad(ctx, aad, aad_len);
+        if(ret != 0){
+            goto err;
+        }
+    }
+    
+    // Decrypt data
+    int processed = crypto_core_aes_update(ctx, *plaintext, ciphertext, actual_ciphertext_len);
+    if(processed < 0){
+        goto err;
+    }
+    
+    // Finish decryption (this verifies the tag)
+    ret = crypto_core_aes_finish(ctx, *plaintext + processed, &outlen);
+    if(ret != 0){
+        goto err;
+    }
+    
+    *plaintext_len = actual_ciphertext_len;
+    
+    crypto_core_aes_cleanup(ctx);
+    return 0;
+    
+err:
+    crypto_core_aes_cleanup(ctx);
+    if(*plaintext){
+        bmc_crypt_free(*plaintext);
+        *plaintext = NULL;
+    }
     return -1;
 }
