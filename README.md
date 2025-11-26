@@ -76,6 +76,85 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/Users/PAM/AppData/Local/Android/Sdk/ndk/29.0
 ```bash
 cmake --build . --config Release
 ```
+### Cách build với Ninja cho IOS device
+
+1. **Tạo thư mục build cho device (arm64):**
+```bash
+mkdir build_ios_device
+cd build_ios_device
+```
+
+2. **Configure và build cho device (iPhone/iPad):**
+```bash
+cmake .. -G "Ninja" \
+  -DCMAKE_SYSTEM_NAME=iOS \
+  -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_SHARED_LIBS=OFF
+```
+
+3. **Build project:**
+```bash
+cmake --build . --config Release
+```
+
+### Cách build với Ninja cho IOS Sim
+
+1. **Tạo thư mục build cho simulator (x86_64 / arm64 for Apple Silicon):**
+```bash
+cd ..
+mkdir build_ios_sim
+cd build_ios_sim
+```
+
+2. **Configure và build cho simulator:**
+```bash
+cmake .. -G "Ninja" \
+  -DCMAKE_SYSTEM_NAME=iOS \
+  -DCMAKE_OSX_SYSROOT=iphonesimulator \
+  -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_SHARED_LIBS=OFF
+```
+
+3. **Build project:**
+```bash
+cmake --build . --config Release
+```
+
+4. **Tạo XCFramework (khuyến nghị)**
+- Xây xong hai thư mục trên, tạo XCFramework để dùng trong Xcode:
+```bash
+# Thay path/to/lib*.a bằng đường dẫn thực tế tới thư viện đã build (ví dụ: build_ios_device/libbmc_crypt.a)
+xcodebuild -create-xcframework \
+  -library ../build_ios_device/path/to/libbmc_crypt.a -headers ../include \
+  -library ../build_ios_sim/path/to/libbmc_crypt.a -headers ../include \
+  -output bmc_crypt.xcframework
+```
+
+### Cách build với Ninja cho MacOS arm64, x86_64
+
+1. **Tạo Universal Binary (arm64 + x86_64) - Khuyến nghị:**
+```bash
+cd ..
+mkdir build_macos_universal
+cd build_macos_universal
+```
+
+2. **Configure và build cho Universal Binary (arm64 + x86_64):**
+```bash
+cmake .. -G "Ninja" \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_SHARED_LIBS=OFF
+```
+
+3. **Build project:**
+```bash
+cmake --build . --config Release
+```
+
 
 ### Các tùy chọn build
 
