@@ -24,7 +24,8 @@ int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
     unsigned char salt[crypto_hash_sha256_BYTES];
     unsigned char salt_input[CURVE25519_KEYLEN * 2];
 
-    if(!shared_secret){
+    if(shared_secret == NULL || ephemeral_pk == NULL || peer_ecdh_pk == NULL || 
+       root_key == NULL || send_chain_key == NULL || recv_chain_key == NULL){
         return -1;
     }
     
@@ -147,6 +148,9 @@ int bmc_protocol_convert_ed25519_to_x25519(unsigned char curve25519_sk[CURVE2551
                             unsigned char curve25519_pk[CURVE25519_KEYLEN],
                             const unsigned char ed25519_sk[SKLEN],
                             const unsigned char ed25519_pk[PKLEN]){
+    if(curve25519_sk == NULL || curve25519_pk == NULL || ed25519_sk == NULL || ed25519_pk == NULL){
+        return -1;
+    }
     if(crypto_sign_ed25519_sk_to_curve25519(curve25519_sk, ed25519_sk)!=0){
         return -1;
     }
@@ -158,11 +162,17 @@ int bmc_protocol_convert_ed25519_to_x25519(unsigned char curve25519_sk[CURVE2551
 
 int bmc_protocol_generate_ed25519_keypair(unsigned char ed25519_sk[SKLEN], 
                                             unsigned char ed25519_pk[PKLEN]){
+    if(ed25519_sk == NULL || ed25519_pk == NULL){
+        return -1;
+    }
     return crypto_sign_ed25519_keypair(ed25519_pk, ed25519_sk);
 }
 
 int bmc_protocol_generate_x25519_keypair(unsigned char curve25519_sk[CURVE25519_KEYLEN], 
                                             unsigned char curve25519_pk[CURVE25519_KEYLEN]){
+    if(curve25519_sk == NULL || curve25519_pk == NULL){
+        return -1;
+    }
     randombytes_buf(curve25519_sk, CURVE25519_KEYLEN);
     if(crypto_scalarmult_curve25519_base(curve25519_pk, curve25519_sk)!=0){
         return -1;
@@ -173,12 +183,18 @@ int bmc_protocol_generate_x25519_keypair(unsigned char curve25519_sk[CURVE25519_
 int bmc_protocol_caculate_secret(unsigned char secret_shared[CURVE25519_KEYLEN],
                                 unsigned char curve25519_sk[CURVE25519_KEYLEN], 
                                 unsigned char curve25519_pk[CURVE25519_KEYLEN]){
+    if(secret_shared == NULL || curve25519_sk == NULL || curve25519_pk == NULL){
+        return -1;
+    }
     return crypto_scalarmult_curve25519(secret_shared, curve25519_sk, curve25519_pk);
 }
 
 int bmc_protocol_sign(unsigned char *sig, unsigned long long *siglen_p,
                              const unsigned char *m, unsigned long long mlen,
                              const unsigned char ed25519_sk[SKLEN]){
+    if(sig == NULL || m == NULL || ed25519_sk == NULL){
+        return -1;
+    }
     return crypto_sign_ed25519_detached(sig, siglen_p, m, mlen, ed25519_sk);
 }
 
@@ -186,6 +202,9 @@ int bmc_protocol_verify(const unsigned char *sig,
                         const unsigned char *m,
                         unsigned long long   mlen,
                         const unsigned char ed25519_sk[PKLEN]){
+    if(sig == NULL || m == NULL || ed25519_sk == NULL){
+        return -1;
+    }
     return crypto_sign_ed25519_verify_detached(sig, m, mlen, ed25519_sk);
 }
 

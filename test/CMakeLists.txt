@@ -227,4 +227,11 @@ add_executable(test_ecdsa test_ecdsa.c)
 target_link_libraries(test_ecdsa bmc_crypt m)
 target_include_directories(test_ecdsa PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME test_ecdsa COMMAND test_ecdsa)
-set_tests_properties(test_ecdsa PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) 
+set_tests_properties(test_ecdsa PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# Test executable for BMC Protocol NULL pointer checks
+add_executable(test_bmc_protocol test_bmc_protocol.c)
+target_link_libraries(test_bmc_protocol bmc_crypt m)
+target_include_directories(test_bmc_protocol PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME test_bmc_protocol COMMAND test_bmc_protocol)
+set_tests_properties(test_bmc_protocol PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) 
