@@ -119,6 +119,7 @@ gmon.out
 # Static analysis
 *.plist
 *.xml
+_codeql_*/
 
 # Windows specific
 *.lnk
