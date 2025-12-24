@@ -65,9 +65,12 @@ if(BUILD_SHARED_LIBS)
         PUBLIC_HEADER "${CMAKE_SOURCE_DIR}/include/bmc_crypt/*.h"
     )
     
+    # Link with math library
+    target_link_libraries(bmc_crypt PRIVATE m)
+    
     # Set compiler flags for shared library
     target_compile_options(bmc_crypt PRIVATE
-        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wmacro-redefined>
+        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra>
         $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wmacro-redefined>
         $<$<C_COMPILER_ID:MSVC>:/W3>
     )
@@ -108,9 +111,12 @@ else()
         PUBLIC_HEADER "${CMAKE_SOURCE_DIR}/include/bmc_crypt/*.h"
     )
     
+    # Link with math library
+    target_link_libraries(bmc_crypt PRIVATE m)
+    
     # Set compiler flags for static library
     target_compile_options(bmc_crypt PRIVATE
-        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -Wmacro-redefined>
+        $<$<C_COMPILER_ID:GNU>:-Wall -Wextra>
         $<$<C_COMPILER_ID:Clang>:-Wall -Wextra -Wmacro-redefined>
         $<$<C_COMPILER_ID:MSVC>:/W3>
     )
