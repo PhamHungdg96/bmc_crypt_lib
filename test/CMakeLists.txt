@@ -9,7 +9,7 @@ enable_testing()
 add_executable(test_ecb test_ecb.c)
 
 # Link with the library
-target_link_libraries(test_ecb bmc_crypt)
+target_link_libraries(test_ecb bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_ecb PRIVATE 
@@ -29,7 +29,7 @@ set_tests_properties(test_ecb PROPERTIES
 add_executable(test_cbc test_cbc.c)
 
 # Link with the library
-target_link_libraries(test_cbc bmc_crypt)
+target_link_libraries(test_cbc bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_cbc PRIVATE 
@@ -49,7 +49,7 @@ set_tests_properties(test_cbc PROPERTIES
 add_executable(test_ctr test_ctr.c)
 
 # Link with the library
-target_link_libraries(test_ctr bmc_crypt)
+target_link_libraries(test_ctr bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_ctr PRIVATE 
@@ -69,7 +69,7 @@ set_tests_properties(test_ctr PROPERTIES
 add_executable(test_gcm test_gcm.c)
 
 # Link with the library
-target_link_libraries(test_gcm bmc_crypt)
+target_link_libraries(test_gcm bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_gcm PRIVATE 
@@ -89,7 +89,7 @@ set_tests_properties(test_gcm PROPERTIES
 add_executable(test_random test_random.c)
 
 # Link with the library
-target_link_libraries(test_random bmc_crypt)
+target_link_libraries(test_random bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_random PRIVATE 
@@ -109,7 +109,7 @@ set_tests_properties(test_random PROPERTIES
 add_executable(test_random_advanced test_random_advanced.c)
 
 # Link with the library
-target_link_libraries(test_random_advanced bmc_crypt)
+target_link_libraries(test_random_advanced bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_random_advanced PRIVATE 
@@ -129,7 +129,7 @@ set_tests_properties(test_random_advanced PROPERTIES
 add_executable(test_aes_ctr_ietf test_aes_ctr_ietf.c)
 
 # Link with the library
-target_link_libraries(test_aes_ctr_ietf bmc_crypt)
+target_link_libraries(test_aes_ctr_ietf bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_aes_ctr_ietf PRIVATE 
@@ -149,7 +149,7 @@ set_tests_properties(test_aes_ctr_ietf PROPERTIES
 add_executable(test_hkdf test_hkdf.c)
 
 # Link with the library
-target_link_libraries(test_hkdf bmc_crypt)
+target_link_libraries(test_hkdf bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_hkdf PRIVATE 
@@ -169,7 +169,7 @@ set_tests_properties(test_hkdf PROPERTIES
 add_executable(test_hash test_hash.c)
 
 # Link with the library
-target_link_libraries(test_hash bmc_crypt)
+target_link_libraries(test_hash bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_hash PRIVATE 
@@ -189,7 +189,7 @@ set_tests_properties(test_hash PROPERTIES
 add_executable(test_aes_context test_aes_context.c)
 
 # Link with the library
-target_link_libraries(test_aes_context bmc_crypt)
+target_link_libraries(test_aes_context bmc_crypt m)
 
 # Set include directories
 target_include_directories(test_aes_context PRIVATE 
@@ -217,14 +217,14 @@ set_tests_properties(test_aes_context PROPERTIES
 
 # Test executable for ECDH
 add_executable(test_ecdh test_ecdh.c)
-target_link_libraries(test_ecdh bmc_crypt)
+target_link_libraries(test_ecdh bmc_crypt m)
 target_include_directories(test_ecdh PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME test_ecdh COMMAND test_ecdh)
 set_tests_properties(test_ecdh PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # Test executable for ECDSA/EdDSA
 add_executable(test_ecdsa test_ecdsa.c)
-target_link_libraries(test_ecdsa bmc_crypt)
+target_link_libraries(test_ecdsa bmc_crypt m)
 target_include_directories(test_ecdsa PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME test_ecdsa COMMAND test_ecdsa)
 set_tests_properties(test_ecdsa PROPERTIES TIMEOUT 30 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) 
