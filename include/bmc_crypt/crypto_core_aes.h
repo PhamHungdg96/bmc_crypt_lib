@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <bmc_crypt/private/modes.h>
+//#include <bmc_crypt/private/modes.h>
 #include <bmc_crypt/export.h>
-#include <bmc_crypt/private/aes_internal.h>
+//#include <bmc_crypt/private/aes_internal.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,9 +41,9 @@ typedef enum {
 
 /* Common AES context structure */
 typedef struct {
-    AES_KEY key;                    /* AES key schedule */
-    block128_f block_encrypt;       /* Block encryption function */
-    block128_f block_decrypt;       /* Block decryption function */
+    void *key;                      /* AES key schedule */
+    void *block_encrypt;            /* Block encryption function */
+    void *block_decrypt;            /* Block decryption function */
     aes_mode_t mode;                /* Encryption mode */
     int enc;                        /* 1 for encrypt, 0 for decrypt */
     
@@ -70,7 +70,7 @@ typedef struct {
         
         /* GCM mode */
         struct {
-            GCM128_CONTEXT *gcm_ctx; /* GCM context from modes.h */
+            void *gcm_ctx;           /* GCM context */
             unsigned char tag[16];   /* Authentication tag */
         } gcm;
     } mode_data;
@@ -197,7 +197,7 @@ BMC_CRYPT_EXPORT
 void crypto_core_aes_ctr_encrypt(const unsigned char *in,
                                 unsigned char *out,
                                 size_t len,
-                                const AES_KEY *key,
+                                const void *key,
                                 const unsigned char *ivec,
                                 unsigned char ecount_buf[16],   // Buffer chứa keystream hiện tại (sẽ bị ghi đè)
                                 unsigned int *num);
@@ -205,13 +205,13 @@ void crypto_core_aes_ctr_encrypt(const unsigned char *in,
 BMC_CRYPT_EXPORT
 int crypto_core_aes_set_key(const unsigned char *user_key,
                                 int bits,
-                                AES_KEY *key,
+                                void *key,
                                 const int enc);
 
 BMC_CRYPT_EXPORT
 int crypto_core_aes_ecb_encrypt(const unsigned char *in,
                                 unsigned char *out,
-                                const AES_KEY *key,
+                                const void *key,
                                 const int enc);
 
 /**
@@ -247,7 +247,7 @@ BMC_CRYPT_EXPORT
 int crypto_core_aes_cbc_encrypt(const unsigned char *in,
                                 unsigned char *out,
                                 size_t len,
-                                const AES_KEY *key,
+                                const void *key,
                                 const unsigned char *ivec,
                                 const int enc);
 

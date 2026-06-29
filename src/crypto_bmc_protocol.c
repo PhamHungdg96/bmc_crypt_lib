@@ -41,7 +41,6 @@ int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
     if (ret != 0) {
         return -1;
     }
-    
     ret = hkdf_derive_secrets(hkdf_ctx, &derived,
                              shared_secret, CURVE25519_KEYLEN,
                              salt, crypto_hash_sha256_BYTES,
@@ -52,13 +51,12 @@ int bmc_protocol_derive_session_keys(const unsigned char *shared_secret,
         hkdf_destroy(hkdf_ctx);
         return -1;
     }
-    
     memcpy(root_key, derived, KEY_LEN);
     memcpy(send_chain_key, derived + KEY_LEN, KEY_LEN);
     memcpy(recv_chain_key, derived + KEY_LEN * 2, KEY_LEN);
     
     hkdf_destroy(hkdf_ctx);
-    bmc_crypt_free(derived);
+    bmc_free(derived);
     return 0;
 }
 
@@ -139,7 +137,7 @@ int bmc_protocol_derive_message_keys_ex(const unsigned char *chain_key,
     }
     
     hkdf_destroy(hkdf_ctx);
-    bmc_crypt_free(derived);
+    bmc_free(derived);
     return 0;
 }
 
@@ -232,7 +230,7 @@ int bmc_protocol_encrypt(unsigned char **ciphertext, size_t *ciphertext_len,
         return -1;
     }
     unsigned char *ciphertext_tmp = NULL;
-    ciphertext_tmp = bmc_crypt_malloc(plaintext_len + 16);
+    ciphertext_tmp = bmc_malloc(plaintext_len + 16);
     if(ciphertext_tmp == NULL){
         goto err;
     }
@@ -246,7 +244,7 @@ int bmc_protocol_encrypt(unsigned char **ciphertext, size_t *ciphertext_len,
         goto err;
     }
     total_clen += outlen;
-    *ciphertext = bmc_crypt_malloc(total_clen+32);
+    *ciphertext = bmc_malloc(total_clen+32);
     if(*ciphertext == NULL){
         goto err;
     }
@@ -257,11 +255,11 @@ int bmc_protocol_encrypt(unsigned char **ciphertext, size_t *ciphertext_len,
     crypto_hmacsha256(mac, ciphertext_tmp, total_clen, mac_key, 32);
     memcpy(*ciphertext + total_clen, mac, 32);
     *ciphertext_len = total_clen+32;
-    bmc_crypt_free(ciphertext_tmp);
+    bmc_free(ciphertext_tmp);
     return 0;
 err:
     crypto_core_aes_cleanup(ctx);
-    bmc_crypt_free(ciphertext_tmp);
+    bmc_free(ciphertext_tmp);
     return -1;
 }
 
@@ -291,7 +289,7 @@ int bmc_protocol_decrypt(unsigned char **plaintext, size_t *plaintext_len,
         return -1;
     }
     unsigned char *plaintext_tmp = NULL;
-    plaintext_tmp = bmc_crypt_malloc(ciphertext_len);
+    plaintext_tmp = bmc_malloc(ciphertext_len);
     if(plaintext_tmp == NULL){
         goto err;
     }
@@ -302,18 +300,18 @@ int bmc_protocol_decrypt(unsigned char **plaintext, size_t *plaintext_len,
         goto err;
     }
     total_dlen += outlen;
-    *plaintext = bmc_crypt_malloc(total_dlen);
+    *plaintext = bmc_malloc(total_dlen);
     if(*plaintext == NULL){
         goto err;
     }
     memcpy(*plaintext, plaintext_tmp, total_dlen);
     *plaintext_len = total_dlen;
     crypto_core_aes_cleanup(ctx);
-    bmc_crypt_free(plaintext_tmp);
+    bmc_free(plaintext_tmp);
     return 0;
 err:
     crypto_core_aes_cleanup(ctx);
-    bmc_crypt_free(plaintext_tmp);
+    bmc_free(plaintext_tmp);
     return -1;
 }
 
@@ -334,7 +332,7 @@ int bmc_protocol_encrypt_aead(unsigned char **ciphertext, size_t *ciphertext_len
     }
     
     // Allocate memory for ciphertext + tag
-    *ciphertext = bmc_crypt_malloc(plaintext_len + GCM_TAG_LEN);
+    *ciphertext = bmc_malloc(plaintext_len + GCM_TAG_LEN);
     if(*ciphertext == NULL){
         return -1;
     }
@@ -381,7 +379,7 @@ int bmc_protocol_encrypt_aead(unsigned char **ciphertext, size_t *ciphertext_len
 err:
     crypto_core_aes_cleanup(ctx);
     if(*ciphertext){
-        bmc_crypt_free(*ciphertext);
+        bmc_free(*ciphertext);
         *ciphertext = NULL;
     }
     return -1;
@@ -414,7 +412,7 @@ int bmc_protocol_decrypt_aead(unsigned char **plaintext, size_t *plaintext_len,
     memcpy(tag, ciphertext + actual_ciphertext_len, GCM_TAG_LEN);
     
     // Allocate memory for plaintext
-    *plaintext = bmc_crypt_malloc(actual_ciphertext_len);
+    *plaintext = bmc_malloc(actual_ciphertext_len);
     if(*plaintext == NULL){
         return -1;
     }
@@ -459,7 +457,7 @@ int bmc_protocol_decrypt_aead(unsigned char **plaintext, size_t *plaintext_len,
 err:
     crypto_core_aes_cleanup(ctx);
     if(*plaintext){
-        bmc_crypt_free(*plaintext);
+        bmc_free(*plaintext);
         *plaintext = NULL;
     }
     return -1;

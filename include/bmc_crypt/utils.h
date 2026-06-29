@@ -143,11 +143,18 @@ void *bmc_crypt_malloc(const size_t size)
             __attribute__ ((malloc));
 
 BMC_CRYPT_EXPORT
+void *bmc_malloc(const size_t size)
+            __attribute__ ((malloc));
+
+BMC_CRYPT_EXPORT
 void *bmc_crypt_allocarray(size_t count, size_t size)
             __attribute__ ((malloc));
 
 BMC_CRYPT_EXPORT
 void bmc_crypt_free(void *ptr);
+
+BMC_CRYPT_EXPORT
+void bmc_free(void *ptr);
 
 BMC_CRYPT_EXPORT
 int bmc_crypt_mprotect_noaccess(void *ptr) __attribute__ ((nonnull));

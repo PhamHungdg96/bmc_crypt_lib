@@ -26,7 +26,7 @@ static volatile int locked;
 int
 bmc_crypt_init(void)
 {
-    fprintf(stderr,"\nbmc_crypt_init\n");
+    //fprintf(stderr,"\nbmc_crypt_init\n");
     if (bmc_crypt_crit_enter() != 0) {
         return -1; /* LCOV_EXCL_LINE */
     }
@@ -39,7 +39,7 @@ bmc_crypt_init(void)
     _bmc_crypt_runtime_get_cpu_features();
     randombytes_stir();
     _bmc_crypt_alloc_init();
-    _crypto_scalarmult_curve25519_pick_best_implementation();
+    //_crypto_scalarmult_curve25519_pick_best_implementation();
     initialized = 1;
     if (bmc_crypt_crit_leave() != 0) {
         return -1; /* LCOV_EXCL_LINE */

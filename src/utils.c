@@ -702,6 +702,18 @@ bmc_crypt_free(void *ptr)
 }
 #endif /* HAVE_ALIGNED_MALLOC */
 
+void *bmc_malloc(const size_t size){
+    return malloc(size > (size_t) 0U ? size+1 : (size_t) 1U);
+}
+
+void bmc_free(void *ptr){
+    if(ptr == NULL){
+        return;
+    }
+    free(ptr);
+}
+
+
 #ifndef HAVE_PAGE_PROTECTION
 static int
 _bmc_crypt_mprotect(void *ptr, int (*cb)(void *ptr, size_t size))

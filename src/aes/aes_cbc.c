@@ -6,7 +6,7 @@
 int crypto_core_aes_cbc_encrypt(const unsigned char *in,
                                 unsigned char *out,
                                 size_t len,
-                                const AES_KEY *key,
+                                const void *key,
                                 const unsigned char *ivec,
                                 const int enc){
     if (enc)

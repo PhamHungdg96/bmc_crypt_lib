@@ -110,19 +110,24 @@ int crypto_core_aes_init(crypto_core_aes_ctx **ctx,
             goto err;
     }
     /* Set block cipher functions */
-    (*ctx)->block_encrypt = (block128_f) AES_encrypt;
-    (*ctx)->block_decrypt = (block128_f) AES_decrypt;
+    (*ctx)->block_encrypt = (void *) AES_encrypt;
+    (*ctx)->block_decrypt = (void *) AES_decrypt;
     
     /* Set mode and encryption flag */
     (*ctx)->mode = mode;
     (*ctx)->enc = enc;
     /* Set up AES key */
+    (*ctx)->key = bmc_crypt_malloc(sizeof(AES_KEY));
+    if (!(*ctx)->key) {
+        fprintf(stderr,"Can't allocate AES key\n");
+        goto err;
+    }
     int bits = (int)(keylen * 8);
     int enc_tmp = (*ctx)->enc;
     if(mode == AES_MODE_CTR || mode == AES_MODE_GCM){
         enc_tmp = AES_ENCRYPT;
     }
-    int ret = crypto_core_aes_set_key(key, bits, &(*ctx)->key, enc_tmp);
+    int ret = crypto_core_aes_set_key(key, bits, (AES_KEY *)(*ctx)->key, enc_tmp);
     if (ret != 0) {
         fprintf(stderr,"Can't set key for AES\n");
         goto err;
@@ -149,7 +154,7 @@ int crypto_core_aes_init(crypto_core_aes_ctx **ctx,
             
         case AES_MODE_GCM:
             /* Create and initialize GCM context */
-            (*ctx)->mode_data.gcm.gcm_ctx = CRYPTO_gcm128_new(&(*ctx)->key, (*ctx)->block_encrypt);
+            (*ctx)->mode_data.gcm.gcm_ctx = CRYPTO_gcm128_new((*ctx)->key, (block128_f)(*ctx)->block_encrypt);
             if (!(*ctx)->mode_data.gcm.gcm_ctx) {
                 fprintf(stderr,"Can't initialize AES-GCM context\n");
                 goto err;
@@ -301,6 +306,12 @@ int crypto_core_aes_cleanup(crypto_core_aes_ctx *ctx) {
         return -1;
     }
     
+    /* Free AES key */
+    if (ctx->key) {
+        bmc_crypt_free(ctx->key);
+        ctx->key = NULL;
+    }
+    
     /* Clean up mode-specific resources */
     switch (ctx->mode) {
         case AES_MODE_ECB:
@@ -340,9 +351,9 @@ static int aes_ecb_update(crypto_core_aes_ctx *ctx,
     /* Process full blocks */
     for (size_t i = 0; i < blocks; i++) {
         if (ctx->enc) {
-            ctx->block_encrypt(in + i * 16, out + i * 16, &ctx->key);
+            ((block128_f)ctx->block_encrypt)(in + i * 16, out + i * 16, ctx->key);
         } else {
-            ctx->block_decrypt(in + i * 16, out + i * 16, &ctx->key);
+            ((block128_f)ctx->block_decrypt)(in + i * 16, out + i * 16, ctx->key);
         }
     }
     
@@ -366,7 +377,7 @@ static int aes_cbc_update(crypto_core_aes_ctx *ctx,
         /* CBC encryption */
         for (size_t i = 0; i < blocks; i++) {
             xor_block(out + i * 16, in + i * 16, ctx->mode_data.cbc.iv);
-            ctx->block_encrypt(out + i * 16, out + i * 16, &ctx->key);
+            ((block128_f)ctx->block_encrypt)(out + i * 16, out + i * 16, ctx->key);
             memcpy(ctx->mode_data.cbc.iv, out + i * 16, 16);
         }
         processed = blocks * 16;
@@ -385,7 +396,7 @@ static int aes_cbc_update(crypto_core_aes_ctx *ctx,
             for (size_t i = 0; i < normal_blocks; i++) {
                 unsigned char temp[16];
                 memcpy(temp, in + i * 16, 16);
-                ctx->block_decrypt(in + i * 16, out + i * 16, &ctx->key);
+                ((block128_f)ctx->block_decrypt)(in + i * 16, out + i * 16, ctx->key);
                 xor_block(out + i * 16, out + i * 16, ctx->mode_data.cbc.iv);
                 memcpy(ctx->mode_data.cbc.iv, temp, 16);
             }
@@ -417,11 +428,11 @@ static int aes_ctr_update(crypto_core_aes_ctx *ctx,
     }
     
     /* Use the optimized CTR implementation from modes/ctr_128.c */
-    CRYPTO_ctr128_encrypt(in, out, inlen, &ctx->key, 
+    CRYPTO_ctr128_encrypt(in, out, inlen, ctx->key, 
                          ctx->mode_data.ctr.nonce,
                          ctx->mode_data.ctr.keystream, 
                          &ctx->mode_data.ctr.keystream_pos,
-                         ctx->block_encrypt);
+                         (block128_f)ctx->block_encrypt);
     
     return (int)inlen;
 }
@@ -485,7 +496,7 @@ static int aes_cbc_finish(crypto_core_aes_ctx *ctx,
             out[ctx->mode_data.cbc.last_block_len + i] = (unsigned char)padding;
         }
         xor_block(out, out, ctx->mode_data.cbc.iv);
-        ctx->block_encrypt(out, out, &ctx->key);
+        ((block128_f)ctx->block_encrypt)(out, out, ctx->key);
         memcpy(ctx->mode_data.cbc.iv, out, 16);
 
         *outlen = 16;
@@ -496,7 +507,7 @@ static int aes_cbc_finish(crypto_core_aes_ctx *ctx,
             return -1; // dữ liệu không hợp lệ
         }
         unsigned char tmp[16];
-        ctx->block_decrypt(ctx->mode_data.cbc.last_block, tmp, &ctx->key);
+        ((block128_f)ctx->block_decrypt)(ctx->mode_data.cbc.last_block, tmp, ctx->key);
         xor_block(tmp, tmp, ctx->mode_data.cbc.iv);
 
         int padding = tmp[15];

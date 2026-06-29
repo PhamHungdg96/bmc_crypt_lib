@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <bmc_crypt/core.h>
 #include <bmc_crypt/crypto_core_aes.h>
+#include <bmc_crypt/private/aes_internal.h>
+
 
 // Test vectors for AES-128 CTR
 static const unsigned char test_key[16] = {
@@ -51,7 +53,7 @@ void test_aes_ctr_encryption() {
     unsigned int num = 0;
 
     // Set up encryption key
-    int ret = crypto_core_aes_set_key(test_key, 128, &key, AES_ENCRYPT);
+    int ret = crypto_core_aes_set_key(test_key, 128, &key, 1);
     if (ret != 0) {
         printf("ERROR: Failed to set encryption key\n");
         exit(1);

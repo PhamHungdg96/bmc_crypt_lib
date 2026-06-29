@@ -182,7 +182,7 @@ void test_hkdf_expand() {
         exit(1);
     }
     
-    bmc_crypt_free(output);
+    bmc_free(output);
     
     // Test expand with NULL parameters
     ret = hkdf_expand(NULL, &output, expected_prk, crypto_hkdf_sha256_KEYBYTES,
@@ -252,7 +252,7 @@ void test_hkdf_derive_secrets() {
         exit(1);
     }
     
-    bmc_crypt_free(output);
+    bmc_free(output);
     
     // Test derive secrets with NULL parameters
     ret = hkdf_derive_secrets(NULL, &output, test_ikm, sizeof(test_ikm),
@@ -367,7 +367,7 @@ void test_hkdf_large_output() {
         exit(1);
     }
     
-    bmc_crypt_free(output);
+    bmc_free(output);
     hkdf_destroy(context);
     printf("HKDF large output test passed\n");
 }

@@ -87,7 +87,7 @@ int hkdf_expand(hkdf_context *context,
     *output = NULL;
 
     // Allocate output buffer
-    result_buf = bmc_crypt_malloc(output_len);
+    result_buf = bmc_malloc(output_len);
     if (!result_buf) {
         return -1;
     }
@@ -133,9 +133,9 @@ int hkdf_expand(hkdf_context *context,
 
         // Save current T for next iteration
         if (prev_t) {
-            bmc_crypt_free(prev_t);
+            bmc_free(prev_t);
         }
-        prev_t = bmc_crypt_malloc(crypto_hash_sha256_BYTES);
+        prev_t = bmc_malloc(crypto_hash_sha256_BYTES);
         if (!prev_t) {
             result = -1;
             goto cleanup;
@@ -148,10 +148,10 @@ int hkdf_expand(hkdf_context *context,
 
 cleanup:
     if (prev_t) {
-        bmc_crypt_free(prev_t);
+        bmc_free(prev_t);
     }
     if (result_buf) {
-        bmc_crypt_free(result_buf);
+        bmc_free(result_buf);
     }
     return result;
 }

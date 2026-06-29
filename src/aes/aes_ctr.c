@@ -9,7 +9,7 @@
 void crypto_core_aes_ctr_encrypt(const unsigned char *in,
                                 unsigned char *out,
                                 size_t len,
-                                const AES_KEY *key,
+                                const void *key,
                                 const unsigned char *ivec,
                                 unsigned char ecount_buf[16],   // Buffer chứa keystream hiện tại (sẽ bị ghi đè)
                                 unsigned int *num){

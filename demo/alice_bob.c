@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <bmc_crypt/core.h>
 #include <bmc_crypt/crypto_sign.h>
 #include <bmc_crypt/crypto_scalarmult_curve25519.h>
 #include <bmc_crypt/crypto_hash_sha256.h>
@@ -22,6 +23,10 @@ void print_hex(const char *label, const unsigned char *data, size_t len) {
 }
 
 int main() {
+
+        // Khởi tạo thư viện    bmc_crypt_init();
+    bmc_crypt_init();
+
     // 1. Sinh khóa cho Alice và Bob
     unsigned char alice_sign_pk[PKLEN], alice_sign_sk[SKLEN];
     unsigned char alice_ecdh_sk[CURVE25519_KEYLEN], alice_ecdh_pk[CURVE25519_KEYLEN];
@@ -133,10 +138,10 @@ int main() {
     unsigned char *plaintext = NULL;
     size_t plaintext_len = 0;
     int ret = bmc_protocol_decrypt_aead(&plaintext, &plaintext_len, ciphertext, ciphertext_len, aad, 32, message_key, iv);
-    assert(ret == 0);
+    if(ret == 0)
     print_hex("plaintext", plaintext, plaintext_len);
     
-    bmc_crypt_free(ciphertext);
-    bmc_crypt_free(plaintext);
+    bmc_free(ciphertext);
+    bmc_free(plaintext);
     return 0;
 }
